@@ -20,7 +20,7 @@ export default function TabTwoScreen() {
     '3. Drop the toy from the same height and record the fall. ' +
     '4. Review speed and landing accuracy results in the app. ' +
     '5. Redesign and test up to three prototypes within 20 minutes. ' +
-    '6. Upload videos, results, and team reflections.';
+    '6. Upload videos, results, and team reflections .';
 
   const handleSpeak = async () => {
     if (isSpeaking) {
