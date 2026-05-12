@@ -1,15 +1,41 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import * as Speech from 'expo-speech';
+import { useState } from 'react';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
 import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Collapsible } from '@/components/ui/collapsible';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 
 export default function TabTwoScreen() {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const instructionsText = 
+    '1. Drop the toy without a parachute and record the fall, baseline test. ' +
+    '2. Build a parachute using provided materials. ' +
+    '3. Drop the toy from the same height and record the fall. ' +
+    '4. Review speed and landing accuracy results in the app. ' +
+    '5. Redesign and test up to three prototypes within 20 minutes. ' +
+    '6. Upload videos, results, and team reflections.';
+
+  const handleSpeak = async () => {
+    if (isSpeaking) {
+      await Speech.stop();
+      setIsSpeaking(false);
+    } else {
+      setIsSpeaking(true);
+      await Speech.speak(instructionsText, {
+        rate: 0.8,
+        pitch: 0.8,
+        onDone: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      });
+    }
+  };
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
@@ -27,30 +53,27 @@ export default function TabTwoScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Explore
+          Parachute Drop Challenge
         </ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
+      <ThemedText>Overview</ThemedText>
+      <Collapsible title="Instructions">
+        <ThemedText>1. Drop the toy without a parachute and record the fall (baseline test).</ThemedText>
+        <ThemedText>2. Build a parachute using provided materials.</ThemedText>
+        <ThemedText>3. Drop the toy from the same height and record the fall.</ThemedText>
+        <ThemedText>4. Review speed and landing accuracy results in the app.</ThemedText>
+        <ThemedText>5. Redesign and test up to three prototypes within 20 minutes.</ThemedText>
+        <ThemedText>6. Upload videos, results, and team reflections.</ThemedText>
+        <Pressable
+          onPress={handleSpeak}
+          style={({ pressed }) => [
+            styles.button,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}>
+          <ThemedText type="link">{isSpeaking ? 'Stop Reading' : 'Read Instructions Aloud'}</ThemedText>
+        </Pressable>
       </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
+
       <Collapsible title="Images">
         <ThemedText>
           For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
@@ -108,5 +131,9 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     gap: 8,
+  },
+  button: {
+    marginTop: 12,
+    padding: 10,
   },
 });
