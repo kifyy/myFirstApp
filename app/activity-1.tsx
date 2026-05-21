@@ -1,8 +1,10 @@
-import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
+import { useFocusEffect } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -25,8 +27,34 @@ export default function ParachuteScreen() {
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(0);
   const stepBoxBackground = useThemeColor({ light: '#FFFFFF', dark: '#1F2428' }, 'background');
   const stepBoxBorder = useThemeColor({ light: '#D0D5DD', dark: '#2F353A' }, 'text');
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadRating = async () => {
+        try {
+          const savedRating = await AsyncStorage.getItem('activity-1-rating');
+          if (savedRating) {
+            setRating(parseInt(savedRating, 10));
+          }
+        } catch (error) {
+          console.error('Error loading rating:', error);
+        }
+      };
+      loadRating();
+    }, [])
+  );
+
+  const handleRating = async (stars: number) => {
+    try {
+      setRating(stars);
+      await AsyncStorage.setItem('activity-1-rating', stars.toString());
+    } catch (error) {
+      console.error('Error saving rating:', error);
+    }
+  };
 
   const handleTagLocation = async () => {
     try {
@@ -155,6 +183,23 @@ export default function ParachuteScreen() {
           <ThemedText style={styles.locationError}>{locationError}</ThemedText>
         )}
       </ThemedView>
+
+      <ThemedView style={styles.ratingSection}>
+        <ThemedText type="defaultSemiBold">Rate Activity</ThemedText>
+        <ThemedView style={styles.starContainer}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Pressable
+              key={star}
+              onPress={() => handleRating(star)}
+              style={styles.starButton}>
+              <ThemedText style={styles.star}>{star <= rating ? '⭐' : '☆'}</ThemedText>
+            </Pressable>
+          ))}
+        </ThemedView>
+        {rating > 0 && (
+          <ThemedText style={styles.ratingDisplay}>You rated: {rating} out of 5 stars</ThemedText>
+        )}
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
@@ -242,6 +287,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FF6B6B',
     paddingHorizontal: 16,
+  },
+  ratingSection: {
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  starContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  starButton: {
+    padding: 4,
+  },
+  star: {
+    fontSize: 32,
+  },
+  ratingDisplay: {
+    fontSize: 14,
+    paddingHorizontal: 8,
   },
   reactLogo: {
     height: 178,
