@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -32,6 +33,36 @@ const ACTIVITIES = [
 
 export default function ActivitiesScreen() {
   const router = useRouter();
+  const [ratings, setRatings] = useState<{ [key: string]: number }>({});
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadRatings = async () => {
+        try {
+          const storedRatings = await Promise.all(
+            ACTIVITIES.map(async (activity) => {
+              const storedValue = await AsyncStorage.getItem(`${activity.key}-rating`);
+              return [activity.key, storedValue ? parseInt(storedValue, 10) : 0] as const;
+            })
+          );
+
+          if (isActive) {
+            setRatings(Object.fromEntries(storedRatings));
+          }
+        } catch (error) {
+          console.error('Error loading ratings:', error);
+        }
+      };
+
+      loadRatings();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -45,6 +76,9 @@ export default function ActivitiesScreen() {
             <View style={styles.cardBody}>
               <ThemedText type="subtitle">{a.title}</ThemedText>
               <ThemedText style={styles.description}>{a.description}</ThemedText>
+              {ratings[a.key] > 0 && (
+                <ThemedText style={styles.ratingSummary}>⭐ {ratings[a.key]}/5</ThemedText>
+              )}
               <Pressable
                 onPress={() => router.push(a.route)}
                 style={({ pressed }) => [styles.rectButton, { opacity: pressed ? 0.85 : 1 }]}>
@@ -88,6 +122,23 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: 'space-between',
     gap: 8,
+  },
+  ratingSummary: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#444',
+  },
+  rectButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#0a7ea4',
+  },
+  rectButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   button: {
     alignSelf: 'flex-start',
