@@ -1,7 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
-import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useCallback, useState } from 'react';
@@ -25,11 +23,15 @@ const steps = [
 export default function ParachuteScreen() {
   const router = useRouter();
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
-  const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(0);
-  const [attempts, setAttempts] = useState<Array<{ test1: string; test2: string; test3: string; createdAt: string }>>([]);
+  const [attempts, setAttempts] = useState<Array<{
+    test1: string;
+    test2: string;
+    test3: string;
+    createdAt: string;
+    uploadedVideo?: string | null;
+    location?: { latitude: number; longitude: number; accuracy: number } | null;
+  }>>([]);
   const stepBoxBackground = useThemeColor({ light: '#FFFFFF', dark: '#1F2428' }, 'background');
   const stepBoxBorder = useThemeColor({ light: '#D0D5DD', dark: '#2F353A' }, 'text');
 
@@ -57,7 +59,14 @@ export default function ParachuteScreen() {
           }
 
           if (savedAttempts) {
-            const parsed = JSON.parse(savedAttempts) as Array<{ test1: string; test2: string; test3: string; createdAt: string }>;
+            const parsed = JSON.parse(savedAttempts) as Array<{
+              test1: string;
+              test2: string;
+              test3: string;
+              createdAt: string;
+              uploadedVideo?: string | null;
+              location?: { latitude: number; longitude: number; accuracy: number } | null;
+            }>;
             setAttempts(parsed);
           }
         } catch (error) {
@@ -101,40 +110,7 @@ export default function ParachuteScreen() {
     );
   };
 
-  const handleTagLocation = async () => {
-    try {
-      setLocationError(null);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationError('Location permission denied');
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        accuracy: loc.coords.accuracy || 0,
-      });
-    } catch (error) {
-      setLocationError('Failed to get location');
-      console.error('Error getting location:', error);
-    }
-  };
-
-  const handleUploadVideo = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'video/*',
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setUploadedVideo(result.assets[0].name || 'Video selected');
-      }
-    } catch (error) {
-      console.error('Error picking video:', error);
-    }
-  };
+  // Upload and location handlers moved to Record Results screen
 
   const handleSpeak = async (stepIndex: number) => {
     if (speakingStep === stepIndex) {
@@ -168,6 +144,34 @@ export default function ParachuteScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
+        <Collapsible title="Overview">
+          <ThemedView
+            style={[
+              styles.stepBox,
+              { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
+            ]}>
+            <ThemedText style={styles.stepText}>
+              Students design, build, and test a parachute for a small toy to reduce its landing speed and impact force. Teams iterate their designs under time and material constraints, aiming to achieve the slowest and safest landing within a target area.
+            </ThemedText>
+          </ThemedView>
+        </Collapsible>
+
+        <Collapsible title="Equipment">
+          <ThemedView
+            style={[
+              styles.stepBox,
+              { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
+            ]}>
+            <ThemedText style={styles.stepText}>- Mobile phone with STEMM Lab app</ThemedText>
+            <ThemedText style={styles.stepText}>- Small toy (e.g. army toy soldier)</ThemedText>
+            <ThemedText style={styles.stepText}>- Table or elevated surface</ThemedText>
+            <ThemedText style={styles.stepText}>- Paper or plastic</ThemedText>
+            <ThemedText style={styles.stepText}>- String</ThemedText>
+            <ThemedText style={styles.stepText}>- Scissors</ThemedText>
+            <ThemedText style={styles.stepText}>- Tape</ThemedText>
+          </ThemedView>
+        </Collapsible>
+
         <Collapsible title="Instructions">
           <ThemedView
             style={[
@@ -189,45 +193,7 @@ export default function ParachuteScreen() {
         </Collapsible>
       </ThemedView>
 
-      <ThemedView style={styles.uploadSection}>
-        <Pressable
-          onPress={handleUploadVideo}
-          style={({ pressed }) => [styles.uploadButton, { opacity: pressed ? 0.7 : 1 }]}>
-          <ThemedText style={styles.uploadButtonText}>📹 Upload Video</ThemedText>
-        </Pressable>
-        {uploadedVideo && (
-          <ThemedText style={styles.uploadedFileName}>✓ {uploadedVideo}</ThemedText>
-        )}
-      </ThemedView>
-
-      <ThemedView style={styles.locationSection}>
-        <Pressable
-          onPress={handleTagLocation}
-          style={({ pressed }) => [styles.locationButton, { opacity: pressed ? 0.7 : 1 }]}>
-          <ThemedText style={styles.locationButtonText}>📍 Tag Location</ThemedText>
-        </Pressable>
-        {location && (
-          <ThemedView
-            style={[
-              styles.locationBox,
-              { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
-            ]}>
-            <ThemedText type="subtitle">Location Tagged</ThemedText>
-            <ThemedText style={styles.locationText}>
-              Latitude: {location.latitude.toFixed(6)}
-            </ThemedText>
-            <ThemedText style={styles.locationText}>
-              Longitude: {location.longitude.toFixed(6)}
-            </ThemedText>
-            <ThemedText style={styles.locationText}>
-              Accuracy: {Math.round(location.accuracy)} m
-            </ThemedText>
-          </ThemedView>
-        )}
-        {locationError && (
-          <ThemedText style={styles.locationError}>{locationError}</ThemedText>
-        )}
-      </ThemedView>
+      {/* Upload and location moved to Record Results page; data shown per-attempt below */}
 
       <ThemedView style={styles.recordSection}>
         <Pressable
@@ -248,6 +214,16 @@ export default function ParachuteScreen() {
               <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
               <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
               <ThemedText style={styles.attemptText}>Test 3: {attempt.test3}</ThemedText>
+              {attempt.uploadedVideo ? (
+                <ThemedText style={styles.attemptText}>Video: {attempt.uploadedVideo}</ThemedText>
+              ) : null}
+              {attempt.location ? (
+                <ThemedView style={styles.locationBoxInline}>
+                  <ThemedText style={styles.locationText}>Lat: {attempt.location.latitude.toFixed(6)}</ThemedText>
+                  <ThemedText style={styles.locationText}>Lon: {attempt.location.longitude.toFixed(6)}</ThemedText>
+                  <ThemedText style={styles.locationText}>Acc: {Math.round(attempt.location.accuracy)} m</ThemedText>
+                </ThemedView>
+              ) : null}
               <ThemedText style={styles.attemptDate}>{new Date(attempt.createdAt).toLocaleString()}</ThemedText>
               <Pressable
                 onPress={() => handleDeleteAttempt(index)}
@@ -419,6 +395,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     color: '#6B7280',
+  },
+  locationBoxInline: {
+    marginTop: 8,
   },
   ratingSection: {
     gap: 12,
