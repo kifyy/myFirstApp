@@ -8,11 +8,11 @@ import { ThemedView } from '@/components/themed-view';
 
 const ACTIVITIES = [
   {
-    key: 'parachute',
+    key: 'activity-1',
     title: 'Parachute Drop Challenge',
     description: 'Design and test parachutes to safely land a small toy.',
     image: require('@/assets/images/partial-react-logo.png'),
-    route: 'parachute',
+    route: 'activity-1',
   },
   {
     key: 'activity-2',
