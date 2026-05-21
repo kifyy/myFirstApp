@@ -2,10 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
@@ -23,11 +23,13 @@ const steps = [
 ];
 
 export default function ParachuteScreen() {
+  const router = useRouter();
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(0);
+  const [attempts, setAttempts] = useState<Array<{ test1: string; test2: string; test3: string; createdAt: string }>>([]);
   const stepBoxBackground = useThemeColor({ light: '#FFFFFF', dark: '#1F2428' }, 'background');
   const stepBoxBorder = useThemeColor({ light: '#D0D5DD', dark: '#2F353A' }, 'text');
 
@@ -43,7 +45,27 @@ export default function ParachuteScreen() {
           console.error('Error loading rating:', error);
         }
       };
-      loadRating();
+      const loadData = async () => {
+        try {
+          const [savedRating, savedAttempts] = await Promise.all([
+            AsyncStorage.getItem('activity-1-rating'),
+            AsyncStorage.getItem('activity-1-attempts'),
+          ]);
+
+          if (savedRating) {
+            setRating(parseInt(savedRating, 10));
+          }
+
+          if (savedAttempts) {
+            const parsed = JSON.parse(savedAttempts) as Array<{ test1: string; test2: string; test3: string; createdAt: string }>;
+            setAttempts(parsed);
+          }
+        } catch (error) {
+          console.error('Error loading activity data:', error);
+        }
+      };
+
+      loadData();
     }, [])
   );
 
@@ -54,6 +76,29 @@ export default function ParachuteScreen() {
     } catch (error) {
       console.error('Error saving rating:', error);
     }
+  };
+
+  const handleDeleteAttempt = (index: number) => {
+    Alert.alert(
+      'Delete Attempt',
+      'Are you sure you want to delete this attempt?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const nextAttempts = attempts.filter((_, attemptIndex) => attemptIndex !== index);
+              setAttempts(nextAttempts);
+              await AsyncStorage.setItem('activity-1-attempts', JSON.stringify(nextAttempts));
+            } catch (error) {
+              console.error('Error deleting attempt:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleTagLocation = async () => {
@@ -184,6 +229,37 @@ export default function ParachuteScreen() {
         )}
       </ThemedView>
 
+      <ThemedView style={styles.recordSection}>
+        <Pressable
+          onPress={() => router.push('/activity-1/record-results')}
+          style={({ pressed }) => [styles.recordButton, { opacity: pressed ? 0.7 : 1 }]}> 
+          <ThemedText style={styles.recordButtonText}>📝 Record Results</ThemedText>
+        </Pressable>
+      </ThemedView>
+
+      <ThemedView style={styles.attemptsSection}>
+        <ThemedText type="defaultSemiBold">Attempts</ThemedText>
+        {attempts.length === 0 ? (
+          <ThemedText style={styles.attemptsEmpty}>Try the experiment to add a new attempt!</ThemedText>
+        ) : (
+          attempts.map((attempt, index) => (
+            <ThemedView key={index} style={styles.attemptCard}>
+              <ThemedText type="defaultSemiBold">Attempt {index + 1}</ThemedText>
+              <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
+              <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
+              <ThemedText style={styles.attemptText}>Test 3: {attempt.test3}</ThemedText>
+              <ThemedText style={styles.attemptDate}>{new Date(attempt.createdAt).toLocaleString()}</ThemedText>
+              <Pressable
+                onPress={() => handleDeleteAttempt(index)}
+                style={({ pressed }) => [styles.deleteAttemptButton, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <ThemedText style={styles.deleteAttemptText}>Delete Attempt</ThemedText>
+              </Pressable>
+            </ThemedView>
+          ))
+        )}
+      </ThemedView>
+
       <ThemedView style={styles.ratingSection}>
         <ThemedText type="defaultSemiBold">Rate Activity</ThemedText>
         <ThemedView style={styles.starContainer}>
@@ -287,6 +363,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FF6B6B',
     paddingHorizontal: 16,
+  },
+  recordSection: {
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  recordButton: {
+    backgroundColor: '#F2994A',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  recordButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  attemptsSection: {
+    gap: 12,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  attemptsEmpty: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  attemptCard: {
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#fff',
+  },
+  deleteAttemptButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#F8D7DA',
+  },
+  deleteAttemptText: {
+    fontSize: 14,
+    color: '#B91C1C',
+    fontWeight: '600',
+  },
+  attemptText: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  attemptDate: {
+    fontSize: 12,
+    marginTop: 8,
+    color: '#6B7280',
   },
   ratingSection: {
     gap: 12,
