@@ -7,9 +7,11 @@ import * as Location from 'expo-location';
 
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
+import { useChallengeTimer } from '@/contexts/challenge-timer-context';
 
 export default function RecordResultsScreen() {
   const router = useRouter();
+  const { reportAttemptRecorded } = useChallengeTimer();
   const [test1, setTest1] = useState('');
   const [test2, setTest2] = useState('');
   const [test3, setTest3] = useState('');
@@ -38,6 +40,7 @@ export default function RecordResultsScreen() {
       }>) : [];
       attempts.push(attempt);
       await AsyncStorage.setItem('activity-1-attempts', JSON.stringify(attempts));
+      await reportAttemptRecorded('activity-1');
       router.back();
     } catch (error) {
       console.error('Error saving attempt:', error);

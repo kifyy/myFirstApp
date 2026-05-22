@@ -7,4 +7,6 @@ export type ChallengeTimerState = {
   activityTitle: string;
   startedAt: number;
   endsAt: number;
+  attemptCountAtStart: number;
+  pointsAwarded?: boolean;
 };

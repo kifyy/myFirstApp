@@ -5,27 +5,37 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { Alert, AppState, type AppStateStatus } from 'react-native';
 
+import {
+  getActivityAttemptCount,
+  getActivityAttempts,
+  hasAttemptDuringChallenge,
+} from '@/lib/activity-attempts';
 import {
   CHALLENGE_DURATION_MS,
   CHALLENGE_TIMER_STORAGE_KEY,
   type ChallengeTimerState,
 } from '@/constants/challenge-timer';
+import { USER_PROFILE_STORAGE_KEY, type UserProfile } from '@/constants/user-profile';
 import {
   dismissChallengeCountdownNotification,
   showChallengeCountdownNotification,
   updateChallengeCountdownNotification,
 } from '@/lib/challenge-countdown-notification';
 import { notifyChallengeStarted } from '@/lib/challenge-notifications';
+import { addLeaderboardPoint } from '@/lib/leaderboard-storage';
+
 type ChallengeTimerContextValue = {
   timer: ChallengeTimerState | null;
   isRunning: boolean;
   remainingMs: number;
   startChallenge: (activityKey: string, activityTitle: string) => Promise<void>;
   leaveChallenge: () => Promise<void>;
+  reportAttemptRecorded: (activityKey: string) => Promise<void>;
   refreshTimer: () => Promise<void>;
 };
 
@@ -37,13 +47,28 @@ function getRemainingMs(endsAt: number): number {
 
 function normalizeTimerState(raw: ChallengeTimerState): ChallengeTimerState {
   const endsAt = raw.endsAt ?? raw.startedAt + CHALLENGE_DURATION_MS;
-  return { ...raw, endsAt };
+  return {
+    ...raw,
+    endsAt,
+    attemptCountAtStart: raw.attemptCountAtStart ?? 0,
+    pointsAwarded: raw.pointsAwarded ?? false,
+  };
+}
+
+async function loadUserProfile(): Promise<UserProfile | null> {
+  try {
+    const stored = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as UserProfile) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function ChallengeTimerProvider({ children }: { children: React.ReactNode }) {
   const [timer, setTimer] = useState<ChallengeTimerState | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const isFinalizingRef = useRef(false);
 
   const syncRemaining = useCallback((state: ChallengeTimerState | null) => {
     if (!state) {
@@ -55,12 +80,72 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
     return remaining;
   }, []);
 
+  const persistTimer = useCallback(async (state: ChallengeTimerState | null) => {
+    if (!state) {
+      await AsyncStorage.removeItem(CHALLENGE_TIMER_STORAGE_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(CHALLENGE_TIMER_STORAGE_KEY, JSON.stringify(state));
+  }, []);
+
   const clearChallenge = useCallback(async () => {
     await AsyncStorage.removeItem(CHALLENGE_TIMER_STORAGE_KEY);
     await dismissChallengeCountdownNotification();
     setTimer(null);
     syncRemaining(null);
   }, [syncRemaining]);
+
+  const checkAttemptDuringChallenge = useCallback(async (state: ChallengeTimerState) => {
+    const attempts = await getActivityAttempts(state.activityKey);
+    return hasAttemptDuringChallenge(attempts, state.startedAt, state.endsAt);
+  }, []);
+
+  const finalizeChallenge = useCallback(
+    async (state: ChallengeTimerState, completed: boolean) => {
+      if (isFinalizingRef.current) {
+        return;
+      }
+      isFinalizingRef.current = true;
+
+      try {
+        if (completed) {
+          if (!state.pointsAwarded) {
+            const profile = await loadUserProfile();
+            if (profile) {
+              await addLeaderboardPoint(profile);
+            }
+          }
+          Alert.alert('Challenge Complete!', 'Great work — your attempt was recorded in time.');
+        } else {
+          Alert.alert('Challenge time has ended', 'No attempt was recorded before the timer finished.');
+        }
+      } finally {
+        await clearChallenge();
+        isFinalizingRef.current = false;
+      }
+    },
+    [clearChallenge]
+  );
+
+  const tryCompleteChallenge = useCallback(
+    async (state: ChallengeTimerState) => {
+      const recorded = await checkAttemptDuringChallenge(state);
+      if (recorded) {
+        await finalizeChallenge(state, true);
+        return true;
+      }
+      return false;
+    },
+    [checkAttemptDuringChallenge, finalizeChallenge]
+  );
+
+  const handleTimerExpired = useCallback(
+    async (state: ChallengeTimerState) => {
+      const recorded = await checkAttemptDuringChallenge(state);
+      await finalizeChallenge(state, recorded);
+    },
+    [checkAttemptDuringChallenge, finalizeChallenge]
+  );
 
   const refreshTimer = useCallback(async () => {
     try {
@@ -75,7 +160,7 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
       const remaining = getRemainingMs(parsed.endsAt);
 
       if (remaining <= 0) {
-        await clearChallenge();
+        await handleTimerExpired(parsed);
         return;
       }
 
@@ -89,7 +174,7 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
     } finally {
       setIsLoading(false);
     }
-  }, [clearChallenge, syncRemaining]);
+  }, [handleTimerExpired, syncRemaining]);
 
   useEffect(() => {
     refreshTimer();
@@ -104,7 +189,12 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
       const remaining = syncRemaining(timer);
 
       if (remaining <= 0) {
-        await clearChallenge();
+        await handleTimerExpired(timer);
+        return;
+      }
+
+      const completed = await tryCompleteChallenge(timer);
+      if (completed) {
         return;
       }
 
@@ -127,30 +217,50 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
       clearInterval(intervalId);
       subscription.remove();
     };
-  }, [timer, syncRemaining, clearChallenge]);
+  }, [timer, syncRemaining, handleTimerExpired, tryCompleteChallenge]);
 
   const startChallenge = useCallback(
     async (activityKey: string, activityTitle: string) => {
+      isFinalizingRef.current = false;
       const startedAt = Date.now();
+      const attemptCountAtStart = await getActivityAttemptCount(activityKey);
       const nextTimer: ChallengeTimerState = {
         activityKey,
         activityTitle,
         startedAt,
         endsAt: startedAt + CHALLENGE_DURATION_MS,
+        attemptCountAtStart,
+        pointsAwarded: false,
       };
 
-      await AsyncStorage.setItem(CHALLENGE_TIMER_STORAGE_KEY, JSON.stringify(nextTimer));
+      await persistTimer(nextTimer);
       setTimer(nextTimer);
       syncRemaining(nextTimer);
       await notifyChallengeStarted(activityTitle);
       await showChallengeCountdownNotification(activityTitle, CHALLENGE_DURATION_MS);
     },
-    [syncRemaining]
+    [persistTimer, syncRemaining]
   );
 
   const leaveChallenge = useCallback(async () => {
+    isFinalizingRef.current = false;
     await clearChallenge();
   }, [clearChallenge]);
+
+  const reportAttemptRecorded = useCallback(
+    async (activityKey: string) => {
+      if (!timer || timer.activityKey !== activityKey || isFinalizingRef.current) {
+        return;
+      }
+
+      const recorded = await checkAttemptDuringChallenge(timer);
+      if (recorded) {
+        const updatedTimer: ChallengeTimerState = { ...timer, pointsAwarded: timer.pointsAwarded };
+        await tryCompleteChallenge(updatedTimer);
+      }
+    },
+    [timer, checkAttemptDuringChallenge, tryCompleteChallenge]
+  );
 
   const value = useMemo(
     () => ({
@@ -159,9 +269,10 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
       remainingMs,
       startChallenge,
       leaveChallenge,
+      reportAttemptRecorded,
       refreshTimer,
     }),
-    [timer, isLoading, remainingMs, startChallenge, leaveChallenge, refreshTimer]
+    [timer, isLoading, remainingMs, startChallenge, leaveChallenge, reportAttemptRecorded, refreshTimer]
   );
 
   return <ChallengeTimerContext.Provider value={value}>{children}</ChallengeTimerContext.Provider>;
