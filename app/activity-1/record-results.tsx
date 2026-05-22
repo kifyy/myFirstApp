@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 
@@ -9,11 +9,28 @@ import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { useChallengeTimer } from '@/contexts/challenge-timer-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import {
+  clearRecordResultsDraft,
+  formHasContent,
+  getNextAttemptNumber,
+  loadRecordResultsDraft,
+  saveRecordResultsDraft,
+} from '@/lib/record-results-draft';
 
 export default function RecordResultsScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
   const { reportAttemptRecorded } = useChallengeTimer();
+  const [test1, setTest1] = useState('');
+  const [test2, setTest2] = useState('');
+  const [test3, setTest3] = useState('');
+  const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const themed = useMemo(
     () =>
@@ -25,6 +42,8 @@ export default function RecordResultsScreen() {
         },
         submitButton: { backgroundColor: colors.tint },
         submitButtonText: { color: colors.onTint },
+        backButton: { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+        backButtonText: { color: colors.text },
         cancelButtonText: { color: colors.tint },
         uploadButton: { backgroundColor: colors.tint },
         uploadButtonText: { color: colors.onTint },
@@ -35,12 +54,30 @@ export default function RecordResultsScreen() {
       }),
     [colors]
   );
-  const [test1, setTest1] = useState('');
-  const [test2, setTest2] = useState('');
-  const [test3, setTest3] = useState('');
-  const [uploadedVideo, setUploadedVideo] = useState<string | null>(null);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const formFields = useMemo(
+    () => ({ test1, test2, test3, uploadedVideo, location, locationError }),
+    [test1, test2, test3, uploadedVideo, location, locationError]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadDraft = async () => {
+        const draft = await loadRecordResultsDraft();
+        if (!draft) {
+          return;
+        }
+        setTest1(draft.test1);
+        setTest2(draft.test2);
+        setTest3(draft.test3);
+        setUploadedVideo(draft.uploadedVideo);
+        setLocation(draft.location);
+        setLocationError(draft.locationError);
+      };
+
+      void loadDraft();
+    }, [])
+  );
 
   const handleSubmit = async () => {
     try {
@@ -53,22 +90,37 @@ export default function RecordResultsScreen() {
         createdAt: new Date().toISOString(),
       };
       const saved = await AsyncStorage.getItem('activity-1-attempts');
-      const attempts = saved ? (JSON.parse(saved) as Array<{
-        test1: string;
-        test2: string;
-        test3: string;
-        createdAt: string;
-        uploadedVideo?: string | null;
-        location?: { latitude: number; longitude: number; accuracy: number } | null;
-      }>) : [];
+      const attempts = saved
+        ? (JSON.parse(saved) as {
+            test1: string;
+            test2: string;
+            test3: string;
+            createdAt: string;
+            uploadedVideo?: string | null;
+            location?: { latitude: number; longitude: number; accuracy: number } | null;
+          }[])
+        : [];
       attempts.push(attempt);
       await AsyncStorage.setItem('activity-1-attempts', JSON.stringify(attempts));
+      await clearRecordResultsDraft();
       await reportAttemptRecorded('activity-1');
       router.back();
     } catch (error) {
       console.error('Error saving attempt:', error);
       router.back();
     }
+  };
+
+  const handleBack = async () => {
+    if (formHasContent(formFields)) {
+      const attemptNumber = await getNextAttemptNumber();
+      await saveRecordResultsDraft(formFields, attemptNumber);
+    }
+    router.back();
+  };
+
+  const handleCancel = () => {
+    router.back();
   };
 
   const handleUploadVideo = async () => {
@@ -91,7 +143,11 @@ export default function RecordResultsScreen() {
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude, accuracy: loc.coords.accuracy || 0 });
+      setLocation({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        accuracy: loc.coords.accuracy || 0,
+      });
     } catch (error) {
       setLocationError('Failed to get location');
       console.error('Error getting location:', error);
@@ -100,75 +156,89 @@ export default function RecordResultsScreen() {
 
   return (
     <AppScreen style={styles.container}>
-      <ThemedText type="title" style={styles.header}>
-        Record Results
-      </ThemedText>
-
-      <ThemedText style={styles.label}>Test 1 Result</ThemedText>
-      <TextInput
-        value={test1}
-        onChangeText={setTest1}
-        placeholder="Enter Test 1 result"
-        style={[styles.input, themed.input]}
-        placeholderTextColor={colors.placeholder}
-      />
-
-      <ThemedText style={styles.label}>Test 2 Result</ThemedText>
-      <TextInput
-        value={test2}
-        onChangeText={setTest2}
-        placeholder="Enter Test 2 result"
-        style={[styles.input, themed.input]}
-        placeholderTextColor={colors.placeholder}
-      />
-
-      <ThemedText style={styles.label}>Test 3 Result</ThemedText>
-      <TextInput
-        value={test3}
-        onChangeText={setTest3}
-        placeholder="Enter Test 3 result"
-        style={[styles.input, themed.input]}
-        placeholderTextColor={colors.placeholder}
-      />
-
-      <Pressable
-        onPress={handleUploadVideo}
-        style={({ pressed }) => [styles.uploadButton, themed.uploadButton, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <Text style={[styles.uploadButtonText, themed.uploadButtonText]}>📹 Attach Video</Text>
-      </Pressable>
-      {uploadedVideo && (
-        <ThemedText style={[styles.uploadedFileName, themed.uploadedFileName]}>✓ {uploadedVideo}</ThemedText>
-      )}
-
-      <Pressable
-        onPress={handleTagLocation}
-        style={({ pressed }) => [styles.locationButton, themed.locationButton, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <Text style={[styles.locationButtonText, themed.locationButtonText]}>📍 Tag Location</Text>
-      </Pressable>
-      {location && (
-        <ThemedText style={styles.locationText}>
-          Location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)} (±{Math.round(location.accuracy)} m)
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ThemedText type="title" style={styles.header}>
+          Record Results
         </ThemedText>
-      )}
-      {locationError && (
-        <ThemedText style={[styles.locationError, themed.locationError]}>{locationError}</ThemedText>
-      )}
 
-      <Pressable
-        onPress={handleSubmit}
-        style={({ pressed }) => [styles.submitButton, themed.submitButton, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <Text style={[styles.submitButtonText, themed.submitButtonText]}>Save Results</Text>
-      </Pressable>
+        <ThemedText style={styles.label}>Test 1 Result</ThemedText>
+        <TextInput
+          value={test1}
+          onChangeText={setTest1}
+          placeholder="Enter Test 1 result"
+          style={[styles.input, themed.input]}
+          placeholderTextColor={colors.placeholder}
+        />
 
-      <Pressable
-        onPress={() => router.back()}
-        style={({ pressed }) => [styles.cancelButton, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <Text style={[styles.cancelButtonText, themed.cancelButtonText]}>Cancel</Text>
-      </Pressable>
+        <ThemedText style={styles.label}>Test 2 Result</ThemedText>
+        <TextInput
+          value={test2}
+          onChangeText={setTest2}
+          placeholder="Enter Test 2 result"
+          style={[styles.input, themed.input]}
+          placeholderTextColor={colors.placeholder}
+        />
+
+        <ThemedText style={styles.label}>Test 3 Result</ThemedText>
+        <TextInput
+          value={test3}
+          onChangeText={setTest3}
+          placeholder="Enter Test 3 result"
+          style={[styles.input, themed.input]}
+          placeholderTextColor={colors.placeholder}
+        />
+
+        <Pressable
+          onPress={handleUploadVideo}
+          style={({ pressed }) => [styles.uploadButton, themed.uploadButton, { opacity: pressed ? 0.7 : 1 }]}>
+          <Text style={[styles.uploadButtonText, themed.uploadButtonText]}>📹 Attach Video</Text>
+        </Pressable>
+        {uploadedVideo ? (
+          <ThemedText style={[styles.uploadedFileName, themed.uploadedFileName]}>
+            ✓ {uploadedVideo}
+          </ThemedText>
+        ) : null}
+
+        <Pressable
+          onPress={handleTagLocation}
+          style={({ pressed }) => [styles.locationButton, themed.locationButton, { opacity: pressed ? 0.7 : 1 }]}>
+          <Text style={[styles.locationButtonText, themed.locationButtonText]}>📍 Tag Location</Text>
+        </Pressable>
+        {location ? (
+          <ThemedText style={styles.locationText}>
+            Location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)} (±
+            {Math.round(location.accuracy)} m)
+          </ThemedText>
+        ) : null}
+        {locationError ? (
+          <ThemedText style={[styles.locationError, themed.locationError]}>{locationError}</ThemedText>
+        ) : null}
+
+        <Pressable
+          onPress={handleSubmit}
+          style={({ pressed }) => [styles.submitButton, themed.submitButton, { opacity: pressed ? 0.7 : 1 }]}>
+          <Text style={[styles.submitButtonText, themed.submitButtonText]}>Save Results</Text>
+        </Pressable>
+
+        <View style={styles.footerRow}>
+          <Pressable
+            onPress={() => {
+              void handleBack();
+            }}
+            style={({ pressed }) => [
+              styles.footerButton,
+              themed.backButton,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}>
+            <Text style={[styles.footerButtonText, themed.backButtonText]}>Back</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleCancel}
+            style={({ pressed }) => [styles.footerButton, { opacity: pressed ? 0.7 : 1 }]}>
+            <Text style={[styles.footerButtonText, themed.cancelButtonText]}>Cancel</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </AppScreen>
   );
 }
@@ -176,8 +246,10 @@ export default function RecordResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
     padding: 16,
-    justifyContent: 'flex-start',
+    paddingBottom: 32,
   },
   header: {
     marginBottom: 24,
@@ -204,12 +276,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  cancelButton: {
+  footerRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  footerButton: {
+    flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
   },
-  cancelButtonText: {
+  footerButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },

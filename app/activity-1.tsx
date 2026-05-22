@@ -3,14 +3,18 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { RecordResultsDraftBar } from '@/components/record-results-draft-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { type RecordResultsDraft } from '@/constants/record-results-draft';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { clearRecordResultsDraft, loadRecordResultsDraft } from '@/lib/record-results-draft';
 
 const steps = [
   'Drop the toy without a parachute and record the fall. This is a baseline test.',
@@ -25,14 +29,17 @@ export default function ParachuteScreen() {
   const router = useRouter();
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [rating, setRating] = useState<number>(0);
-  const [attempts, setAttempts] = useState<Array<{
-    test1: string;
-    test2: string;
-    test3: string;
-    createdAt: string;
-    uploadedVideo?: string | null;
-    location?: { latitude: number; longitude: number; accuracy: number } | null;
-  }>>([]);
+  const [attempts, setAttempts] = useState<
+    {
+      test1: string;
+      test2: string;
+      test3: string;
+      createdAt: string;
+      uploadedVideo?: string | null;
+      location?: { latitude: number; longitude: number; accuracy: number } | null;
+    }[]
+  >([]);
+  const [draft, setDraft] = useState<RecordResultsDraft | null>(null);
   const { colors } = useAppTheme();
   const stepBoxBackground = colors.card;
   const stepBoxBorder = colors.borderStrong;
@@ -91,9 +98,24 @@ export default function ParachuteScreen() {
         }
       };
 
+      const loadDraft = async () => {
+        const savedDraft = await loadRecordResultsDraft();
+        setDraft(savedDraft);
+      };
+
       loadData();
+      loadDraft();
     }, [])
   );
+
+  const handleContinueDraft = () => {
+    router.push('/activity-1/record-results');
+  };
+
+  const handleDeleteDraft = async () => {
+    await clearRecordResultsDraft();
+    setDraft(null);
+  };
 
   const handleRating = async (stars: number) => {
     try {
@@ -148,18 +170,25 @@ export default function ParachuteScreen() {
   };
 
   return (
-    <AppScreen>
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: colors.parallaxHeader, dark: colors.parallaxHeader }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Parachute Drop Challenge</ThemedText>
-      </ThemedView>
+    <AppScreen style={styles.screen}>
+      <Pressable
+        onPress={() => router.push('/(tabs)/activities')}
+        style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.7 : 1 }]}
+        accessibilityLabel="Return to Activities">
+        <IconSymbol name="chevron.left" size={26} color={colors.tint} />
+      </Pressable>
+      <View style={[styles.main, draft ? styles.mainWithDraft : undefined]}>
+        <ParallaxScrollView
+          headerBackgroundColor={{ light: colors.parallaxHeader, dark: colors.parallaxHeader }}
+          headerImage={
+            <Image
+              source={require('@/assets/images/partial-react-logo.png')}
+              style={styles.reactLogo}
+            />
+          }>
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="title">Parachute Drop Challenge</ThemedText>
+          </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
         <Collapsible title="Overview">
@@ -282,17 +311,44 @@ export default function ParachuteScreen() {
           </ThemedText>
         )}
       </ThemedView>
-    </ParallaxScrollView>
+        </ParallaxScrollView>
+      </View>
+      {draft ? (
+        <RecordResultsDraftBar
+          draft={draft}
+          onContinue={handleContinueDraft}
+          onDelete={() => {
+            void handleDeleteDraft();
+          }}
+        />
+      ) : null}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 4,
+    left: 8,
+    zIndex: 20,
+    padding: 8,
+  },
+  main: {
+    flex: 1,
+  },
+  mainWithDraft: {
+    paddingBottom: 100,
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,
+    paddingTop: 40,
   },
   stepContainer: {
     gap: 8,
