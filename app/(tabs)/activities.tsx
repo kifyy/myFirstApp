@@ -1,35 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
-
-const ACTIVITIES = [
-  {
-    key: 'activity-1',
-    title: 'Parachute Drop Challenge',
-    description: 'Design and test parachutes to safely land a small toy.',
-    image: require('@/assets/images/partial-react-logo.png'),
-    route: 'activity-1',
-  },
-  {
-    key: 'activity-2',
-    title: 'Sound Pollution Hunter',
-    description: 'Sound Pollution Hunter description.',
-    image: require('@/assets/images/partial-react-logo.png'),
-    route: 'activity-2',
-  },
-  {
-    key: 'activity-3',
-    title: 'Hand Fan Challenge',
-    description: 'Hand Fan Challenge description.',
-    image: require('@/assets/images/partial-react-logo.png'),
-    route: 'activity-3',
-  },
-];
+import { ACTIVITIES } from '@/constants/activities';
 
 export default function ActivitiesScreen() {
   const router = useRouter();
@@ -70,17 +47,17 @@ export default function ActivitiesScreen() {
         Activities
       </ThemedText>
       <ScrollView contentContainerStyle={styles.list}>
-        {ACTIVITIES.map((a) => (
-          <View key={a.key} style={styles.card}>
-            <Image source={a.image} style={styles.image} />
+        {ACTIVITIES.map((activity) => (
+          <View key={activity.key} style={styles.card}>
+            <Image source={activity.image} style={styles.image} />
             <View style={styles.cardBody}>
-              <ThemedText type="subtitle">{a.title}</ThemedText>
-              <ThemedText style={styles.description}>{a.description}</ThemedText>
-              {ratings[a.key] > 0 && (
-                <ThemedText style={styles.ratingSummary}>⭐ {ratings[a.key]}/5</ThemedText>
+              <ThemedText type="subtitle">{activity.title}</ThemedText>
+              <ThemedText style={styles.description}>{activity.description}</ThemedText>
+              {ratings[activity.key] > 0 && (
+                <ThemedText style={styles.ratingSummary}>⭐ {ratings[activity.key]}/5</ThemedText>
               )}
               <Pressable
-                onPress={() => router.push(a.route)}
+                onPress={() => router.push(activity.route)}
                 style={({ pressed }) => [styles.rectButton, { opacity: pressed ? 0.85 : 1 }]}>
                 <ThemedText style={styles.rectButtonText}>Learn More</ThemedText>
               </Pressable>

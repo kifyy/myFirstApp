@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ChallengeTimerProvider } from '@/contexts/challenge-timer-context';
 import { UserProfileProvider } from '@/contexts/user-profile-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -17,6 +18,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <UserProfileProvider>
+        <ChallengeTimerProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -30,6 +32,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
+        </ChallengeTimerProvider>
       </UserProfileProvider>
     </SafeAreaProvider>
   );

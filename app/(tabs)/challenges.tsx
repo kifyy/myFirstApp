@@ -1,142 +1,228 @@
 import { Image } from 'expo-image';
-import * as Speech from 'expo-speech';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { ACTIVITIES } from '@/constants/activities';
+import { useChallengeTimer } from '@/contexts/challenge-timer-context';
+import { formatCountdown } from '@/lib/format-countdown';
 
-export default function TabTwoScreen() {
-  const [isSpeaking, setIsSpeaking] = useState(false);
+export default function ChallengesScreen() {
+  const router = useRouter();
+  const { timer, isRunning, remainingMs, startChallenge, leaveChallenge } = useChallengeTimer();
 
-  const instructionsText = 
-    '1. Drop the toy without a parachute and record the fall, baseline test. ' +
-    '2. Build a parachute using provided materials. ' +
-    '3. Drop the toy from the same height and record the fall. ' +
-    '4. Review speed and landing accuracy results in the app. ' +
-    '5. Redesign and test up to three prototypes within 20 minutes. ' +
-    '6. Upload videos, results, and team reflections....';
-
-  const handleSpeak = async () => {
-    if (isSpeaking) {
-      await Speech.stop();
-      setIsSpeaking(false);
-    } else {
-      setIsSpeaking(true);
-      await Speech.speak(instructionsText, {
-        rate: 0.8,
-        pitch: 0.8,
-        onDone: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
-      });
+  const handleStartPress = (activityKey: string, activityTitle: string, route: string) => {
+    if (isRunning) {
+      return;
     }
-  };
-  return (
-    <AppScreen>
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Parachute Drop Challenge
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>Overview</ThemedText>
-      <Collapsible title="Instructions">
-        <ThemedText>1. Drop the toy without a parachute and record the fall (baseline test).</ThemedText>
-        <ThemedText>2. Build a parachute using provided materials.</ThemedText>
-        <ThemedText>3. Drop the toy from the same height and record the fall.</ThemedText>
-        <ThemedText>4. Review speed and landing accuracy results in the app.</ThemedText>
-        <ThemedText>5. Redesign and test up to three prototypes within 20 minutes.</ThemedText>
-        <ThemedText>6. Upload videos, results, and team reflections.</ThemedText>
-        <Pressable
-          onPress={handleSpeak}
-          style={({ pressed }) => [
-            styles.button,
-            { opacity: pressed ? 0.6 : 1 },
-          ]}>
-          <ThemedText type="link">{isSpeaking ? 'Stop Reading' : 'Read Instructions Aloud'}</ThemedText>
-        </Pressable>
-      </Collapsible>
 
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
+    Alert.alert('Start Challenge', 'Are you ready to start the challenge?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes',
+        onPress: () => {
+          void (async () => {
+            await startChallenge(activityKey, activityTitle);
+            router.push(route as '/activity-1' | '/activity-2' | '/activity-3');
+          })();
+        },
+      },
+    ]);
+  };
+
+  const handleLeaveChallenge = () => {
+    Alert.alert('Leave Challenge', 'Stop the current challenge timer?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes',
+        style: 'destructive',
+        onPress: () => {
+          void leaveChallenge();
+        },
+      },
+    ]);
+  };
+
+  return (
+    <AppScreen style={styles.container}>
+      <ThemedText type="title" style={styles.header}>
+        Challenges
+      </ThemedText>
+      {isRunning && timer ? (
+        <View style={styles.timerBanner}>
+          <ThemedText style={styles.timerLabel}>Challenge in progress</ThemedText>
+          <ThemedText style={styles.timerValue}>{formatCountdown(remainingMs)}</ThemedText>
+          <ThemedText style={styles.timerActivity}>{timer.activityTitle}</ThemedText>
+          <Pressable
+            onPress={handleLeaveChallenge}
+            style={({ pressed }) => [styles.leaveButton, { opacity: pressed ? 0.85 : 1 }]}>
+            <ThemedText style={styles.leaveButtonText}>Leave Challenge</ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
+      <ScrollView contentContainerStyle={styles.list}>
+        {ACTIVITIES.map((activity) => {
+          const isActive = timer?.activityKey === activity.key;
+          const isDisabled = isRunning && !isActive;
+
+          return (
+            <View
+              key={activity.key}
+              style={[styles.card, isActive && styles.cardActive, isDisabled && styles.cardDisabled]}>
+              <Image source={activity.image} style={[styles.image, isDisabled && styles.imageDisabled]} />
+              <View style={styles.cardBody}>
+                <ThemedText type="subtitle" style={isDisabled ? styles.textDisabled : undefined}>
+                  {activity.title}
+                </ThemedText>
+                <ThemedText style={[styles.description, isDisabled && styles.textDisabled]}>
+                  {activity.description}
+                </ThemedText>
+                {isActive && isRunning ? (
+                  <ThemedText style={styles.runningLabel}>
+                    Running · {formatCountdown(remainingMs)}
+                  </ThemedText>
+                ) : null}
+                {isActive && isRunning ? (
+                  <Pressable
+                    onPress={handleLeaveChallenge}
+                    style={({ pressed }) => [styles.leaveButtonInline, { opacity: pressed ? 0.85 : 1 }]}>
+                    <ThemedText style={styles.leaveButtonText}>Leave Challenge</ThemedText>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() => handleStartPress(activity.key, activity.title, activity.route)}
+                    disabled={isDisabled}
+                    style={({ pressed }) => [
+                      styles.startButton,
+                      isDisabled && styles.startButtonDisabled,
+                      { opacity: pressed && !isDisabled ? 0.85 : 1 },
+                    ]}>
+                    <ThemedText style={[styles.startButtonText, isDisabled && styles.startButtonTextDisabled]}>
+                      Start
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          );
         })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </ScrollView>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    padding: 16,
   },
-  titleContainer: {
+  header: {
+    marginBottom: 12,
+  },
+  timerBanner: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#F97316',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    gap: 4,
+  },
+  timerLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#C2410C',
+  },
+  timerValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
+  timerActivity: {
+    fontSize: 14,
+    color: '#9A3412',
+  },
+  leaveButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+  },
+  leaveButtonInline: {
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+  },
+  leaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  list: {
+    gap: 12,
+    paddingBottom: 32,
+  },
+  card: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardActive: {
+    borderColor: '#F97316',
+  },
+  cardDisabled: {
+    opacity: 0.55,
+  },
+  image: {
+    width: 110,
+    height: 110,
+  },
+  imageDisabled: {
+    opacity: 0.7,
+  },
+  cardBody: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
     gap: 8,
   },
-  button: {
-    marginTop: 12,
-    padding: 10,
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  textDisabled: {
+    color: '#9CA3AF',
+  },
+  runningLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EA580C',
+  },
+  startButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#0a7ea4',
+  },
+  startButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  startButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  startButtonTextDisabled: {
+    color: '#F3F4F6',
   },
 });
