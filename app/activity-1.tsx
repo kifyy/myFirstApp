@@ -5,6 +5,7 @@ import * as Speech from 'expo-speech';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 
+import { AppScreen } from '@/components/app-screen';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -131,6 +132,7 @@ export default function ParachuteScreen() {
   };
 
   return (
+    <AppScreen>
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
@@ -253,6 +255,7 @@ export default function ParachuteScreen() {
         )}
       </ThemedView>
     </ParallaxScrollView>
+    </AppScreen>
   );
 }
 

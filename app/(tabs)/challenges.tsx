@@ -3,6 +3,7 @@ import * as Speech from 'expo-speech';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
+import { AppScreen } from '@/components/app-screen';
 import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
@@ -37,6 +38,7 @@ export default function TabTwoScreen() {
     }
   };
   return (
+    <AppScreen>
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
@@ -118,6 +120,7 @@ export default function TabTwoScreen() {
         })}
       </Collapsible>
     </ParallaxScrollView>
+    </AppScreen>
   );
 }
 

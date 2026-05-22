@@ -4,8 +4,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 
 const ACTIVITIES = [
   {
@@ -65,7 +65,7 @@ export default function ActivitiesScreen() {
   );
 
   return (
-    <ThemedView style={styles.container}>
+    <AppScreen style={styles.container}>
       <ThemedText type="title" style={styles.header}>
         Activities
       </ThemedText>
@@ -88,7 +88,7 @@ export default function ActivitiesScreen() {
           </View>
         ))}
       </ScrollView>
-    </ThemedView>
+    </AppScreen>
   );
 }
 

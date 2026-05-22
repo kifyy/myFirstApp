@@ -1,16 +1,16 @@
 import { StyleSheet } from 'react-native';
 
+import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 
 export default function LeaderboardScreen() {
   return (
-    <ThemedView style={styles.container}>
+    <AppScreen style={styles.container}>
       <ThemedText type="title">Leaderboard</ThemedText>
       <ThemedText style={styles.subtitle}>
         Track top scores, compare progress, and see who is leading the challenges.
       </ThemedText>
-    </ThemedView>
+    </AppScreen>
   );
 }
 

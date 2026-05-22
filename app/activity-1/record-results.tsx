@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, TextInput } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 
+import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 
 export default function RecordResultsScreen() {
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function RecordResultsScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <AppScreen style={styles.container}>
       <ThemedText type="title" style={styles.header}>
         Record Results
       </ThemedText>
@@ -136,7 +136,7 @@ export default function RecordResultsScreen() {
       >
         <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
       </Pressable>
-    </ThemedView>
+    </AppScreen>
   );
 }
 

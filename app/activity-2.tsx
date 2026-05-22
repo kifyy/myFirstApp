@@ -1,15 +1,15 @@
+import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { StyleSheet } from 'react-native';
 
 export default function Activity2() {
   return (
-    <ThemedView style={styles.container}>
+    <AppScreen style={styles.container}>
       <ThemedText type="title">Sound Pollution Hunter</ThemedText>
       <ThemedText style={styles.subtitle}>
         Sound Pollution Hunter description.
       </ThemedText>
-    </ThemedView>
+    </AppScreen>
   );
 }
 
