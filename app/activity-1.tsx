@@ -2,15 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 const steps = [
   'Drop the toy without a parachute and record the fall. This is a baseline test.',
@@ -33,8 +33,24 @@ export default function ParachuteScreen() {
     uploadedVideo?: string | null;
     location?: { latitude: number; longitude: number; accuracy: number } | null;
   }>>([]);
-  const stepBoxBackground = useThemeColor({ light: '#FFFFFF', dark: '#1F2428' }, 'background');
-  const stepBoxBorder = useThemeColor({ light: '#D0D5DD', dark: '#2F353A' }, 'text');
+  const { colors } = useAppTheme();
+  const stepBoxBackground = colors.card;
+  const stepBoxBorder = colors.borderStrong;
+
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        recordButton: { backgroundColor: colors.tint },
+        recordButtonText: { color: colors.onTint },
+        deleteAttemptButton: { backgroundColor: colors.dangerSurface },
+        deleteAttemptText: { color: colors.danger },
+        attemptCard: { borderColor: colors.borderStrong, backgroundColor: colors.card },
+        attemptsEmpty: { color: colors.muted },
+        attemptDate: { color: colors.muted },
+        ratingDisplay: { color: colors.muted },
+      }),
+    [colors]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -134,7 +150,7 @@ export default function ParachuteScreen() {
   return (
     <AppScreen>
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: colors.parallaxHeader, dark: colors.parallaxHeader }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
@@ -200,18 +216,20 @@ export default function ParachuteScreen() {
       <ThemedView style={styles.recordSection}>
         <Pressable
           onPress={() => router.push('/activity-1/record-results')}
-          style={({ pressed }) => [styles.recordButton, { opacity: pressed ? 0.7 : 1 }]}> 
-          <ThemedText style={styles.recordButtonText}>📝 Record Results</ThemedText>
+          style={({ pressed }) => [styles.recordButton, themed.recordButton, { opacity: pressed ? 0.7 : 1 }]}>
+          <Text style={[styles.recordButtonText, themed.recordButtonText]}>📝 Record Results</Text>
         </Pressable>
       </ThemedView>
 
       <ThemedView style={styles.attemptsSection}>
         <ThemedText type="defaultSemiBold">Attempts</ThemedText>
         {attempts.length === 0 ? (
-          <ThemedText style={styles.attemptsEmpty}>Try the experiment to add a new attempt!</ThemedText>
+          <ThemedText style={[styles.attemptsEmpty, themed.attemptsEmpty]}>
+            Try the experiment to add a new attempt!
+          </ThemedText>
         ) : (
           attempts.map((attempt, index) => (
-            <ThemedView key={index} style={styles.attemptCard}>
+            <ThemedView key={index} style={[styles.attemptCard, themed.attemptCard]}>
               <ThemedText type="defaultSemiBold">Attempt {index + 1}</ThemedText>
               <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
               <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
@@ -226,12 +244,20 @@ export default function ParachuteScreen() {
                   <ThemedText style={styles.locationText}>Acc: {Math.round(attempt.location.accuracy)} m</ThemedText>
                 </ThemedView>
               ) : null}
-              <ThemedText style={styles.attemptDate}>{new Date(attempt.createdAt).toLocaleString()}</ThemedText>
+              <ThemedText style={[styles.attemptDate, themed.attemptDate]}>
+                {new Date(attempt.createdAt).toLocaleString()}
+              </ThemedText>
               <Pressable
                 onPress={() => handleDeleteAttempt(index)}
-                style={({ pressed }) => [styles.deleteAttemptButton, { opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [
+                  styles.deleteAttemptButton,
+                  themed.deleteAttemptButton,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
               >
-                <ThemedText style={styles.deleteAttemptText}>Delete Attempt</ThemedText>
+                <ThemedText style={[styles.deleteAttemptText, themed.deleteAttemptText]}>
+                  Delete Attempt
+                </ThemedText>
               </Pressable>
             </ThemedView>
           ))
@@ -251,7 +277,9 @@ export default function ParachuteScreen() {
           ))}
         </ThemedView>
         {rating > 0 && (
-          <ThemedText style={styles.ratingDisplay}>You rated: {rating} out of 5 stars</ThemedText>
+          <ThemedText style={[styles.ratingDisplay, themed.ratingDisplay]}>
+            You rated: {rating} out of 5 stars
+          </ThemedText>
         )}
       </ThemedView>
     </ParallaxScrollView>
@@ -350,14 +378,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   recordButton: {
-    backgroundColor: '#F2994A',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   recordButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -368,14 +394,11 @@ const styles = StyleSheet.create({
   },
   attemptsEmpty: {
     fontSize: 14,
-    color: '#6B7280',
   },
   attemptCard: {
     borderWidth: 1,
-    borderColor: '#D0D5DD',
     borderRadius: 14,
     padding: 14,
-    backgroundColor: '#fff',
   },
   deleteAttemptButton: {
     marginTop: 12,
@@ -383,11 +406,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: '#F8D7DA',
   },
   deleteAttemptText: {
     fontSize: 14,
-    color: '#B91C1C',
     fontWeight: '600',
   },
   attemptText: {
@@ -397,7 +418,6 @@ const styles = StyleSheet.create({
   attemptDate: {
     fontSize: 12,
     marginTop: 8,
-    color: '#6B7280',
   },
   locationBoxInline: {
     marginTop: 8,

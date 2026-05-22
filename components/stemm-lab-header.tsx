@@ -3,22 +3,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useUserProfile } from '@/contexts/user-profile-context';
-
-const HEADER_GRAY = '#6B7280';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export function StemmLabHeader() {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { profile } = useUserProfile();
   const headerBandHeight = height * 0.03;
+  const headerMuted = useThemeColor({}, 'headerMuted');
 
   return (
     <View style={[styles.container, { minHeight: headerBandHeight + insets.top, paddingTop: insets.top }]}>
-      <ThemedText style={styles.title} lightColor={HEADER_GRAY} darkColor={HEADER_GRAY}>
+      <ThemedText style={styles.title} lightColor={headerMuted} darkColor={headerMuted}>
         STEMM Lab
       </ThemedText>
       {profile ? (
-        <ThemedText style={styles.details} lightColor={HEADER_GRAY} darkColor={HEADER_GRAY} numberOfLines={1}>
+        <ThemedText style={styles.details} lightColor={headerMuted} darkColor={headerMuted} numberOfLines={1}>
           {profile.firstName} · {profile.teamName} · {profile.yearLevel}
         </ThemedText>
       ) : null}

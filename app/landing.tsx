@@ -16,21 +16,22 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { YEAR_LEVELS, type YearLevel } from '@/constants/user-profile';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function LandingScreen() {
   const router = useRouter();
   const { saveProfile } = useUserProfile();
+  const { colors } = useAppTheme();
   const [teamName, setTeamName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [yearLevel, setYearLevel] = useState<YearLevel | ''>('');
   const [yearPickerVisible, setYearPickerVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const borderColor = useThemeColor({ light: '#D0D5DD', dark: '#2F353A' }, 'text');
-  const inputBackground = useThemeColor({ light: '#FFFFFF', dark: '#1F2428' }, 'background');
-  const placeholderColor = useThemeColor({ light: '#687076', dark: '#9BA1A6' }, 'icon');
-  const textColor = useThemeColor({}, 'text');
+  const borderColor = colors.borderStrong;
+  const inputBackground = colors.inputBackground;
+  const placeholderColor = colors.placeholder;
+  const textColor = colors.text;
 
   const isFormComplete =
     teamName.trim().length > 0 && firstName.trim().length > 0 && yearLevel !== '';
@@ -115,10 +116,14 @@ export default function LandingScreen() {
             disabled={!isFormComplete || isSubmitting}
             style={({ pressed }) => [
               styles.startButton,
-              (!isFormComplete || isSubmitting) && styles.startButtonDisabled,
+              {
+                backgroundColor: !isFormComplete || isSubmitting ? colors.disabled : colors.tint,
+              },
               { opacity: pressed && isFormComplete ? 0.85 : 1 },
             ]}>
-            <ThemedText style={styles.startButtonText}>Start Experimenting!</ThemedText>
+            <ThemedText style={[styles.startButtonText, { color: colors.onTint }]}>
+              Start Experimenting!
+            </ThemedText>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -128,7 +133,9 @@ export default function LandingScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setYearPickerVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setYearPickerVisible(false)}>
+        <Pressable
+          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
+          onPress={() => setYearPickerVisible(false)}>
           <Pressable style={[styles.modalCard, { backgroundColor: inputBackground, borderColor }]}>
             <ThemedText type="subtitle" style={styles.modalTitle}>
               Select your year level
@@ -209,22 +216,16 @@ const styles = StyleSheet.create({
   },
   startButton: {
     width: '100%',
-    backgroundColor: '#0a7ea4',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  startButtonDisabled: {
-    backgroundColor: '#9BA1A6',
-  },
   startButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     padding: 24,
   },

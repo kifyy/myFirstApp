@@ -1,17 +1,40 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { useChallengeTimer } from '@/contexts/challenge-timer-context';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function RecordResultsScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const { reportAttemptRecorded } = useChallengeTimer();
+
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        input: {
+          borderColor: colors.borderStrong,
+          backgroundColor: colors.inputBackground,
+          color: colors.text,
+        },
+        submitButton: { backgroundColor: colors.tint },
+        submitButtonText: { color: colors.onTint },
+        cancelButtonText: { color: colors.tint },
+        uploadButton: { backgroundColor: colors.tint },
+        uploadButtonText: { color: colors.onTint },
+        uploadedFileName: { color: colors.success },
+        locationButton: { backgroundColor: colors.success },
+        locationButtonText: { color: colors.onTint },
+        locationError: { color: colors.danger },
+      }),
+    [colors]
+  );
   const [test1, setTest1] = useState('');
   const [test2, setTest2] = useState('');
   const [test3, setTest3] = useState('');
@@ -86,7 +109,8 @@ export default function RecordResultsScreen() {
         value={test1}
         onChangeText={setTest1}
         placeholder="Enter Test 1 result"
-        style={styles.input}
+        style={[styles.input, themed.input]}
+        placeholderTextColor={colors.placeholder}
       />
 
       <ThemedText style={styles.label}>Test 2 Result</ThemedText>
@@ -94,7 +118,8 @@ export default function RecordResultsScreen() {
         value={test2}
         onChangeText={setTest2}
         placeholder="Enter Test 2 result"
-        style={styles.input}
+        style={[styles.input, themed.input]}
+        placeholderTextColor={colors.placeholder}
       />
 
       <ThemedText style={styles.label}>Test 3 Result</ThemedText>
@@ -102,42 +127,47 @@ export default function RecordResultsScreen() {
         value={test3}
         onChangeText={setTest3}
         placeholder="Enter Test 3 result"
-        style={styles.input}
+        style={[styles.input, themed.input]}
+        placeholderTextColor={colors.placeholder}
       />
 
       <Pressable
         onPress={handleUploadVideo}
-        style={({ pressed }) => [styles.uploadButton, { opacity: pressed ? 0.7 : 1 }]}
+        style={({ pressed }) => [styles.uploadButton, themed.uploadButton, { opacity: pressed ? 0.7 : 1 }]}
       >
-        <ThemedText style={styles.uploadButtonText}>📹 Attach Video</ThemedText>
+        <Text style={[styles.uploadButtonText, themed.uploadButtonText]}>📹 Attach Video</Text>
       </Pressable>
-      {uploadedVideo && <ThemedText style={styles.uploadedFileName}>✓ {uploadedVideo}</ThemedText>}
+      {uploadedVideo && (
+        <ThemedText style={[styles.uploadedFileName, themed.uploadedFileName]}>✓ {uploadedVideo}</ThemedText>
+      )}
 
       <Pressable
         onPress={handleTagLocation}
-        style={({ pressed }) => [styles.locationButton, { opacity: pressed ? 0.7 : 1 }]}
+        style={({ pressed }) => [styles.locationButton, themed.locationButton, { opacity: pressed ? 0.7 : 1 }]}
       >
-        <ThemedText style={styles.locationButtonText}>📍 Tag Location</ThemedText>
+        <Text style={[styles.locationButtonText, themed.locationButtonText]}>📍 Tag Location</Text>
       </Pressable>
       {location && (
         <ThemedText style={styles.locationText}>
           Location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)} (±{Math.round(location.accuracy)} m)
         </ThemedText>
       )}
-      {locationError && <ThemedText style={styles.locationError}>{locationError}</ThemedText>}
+      {locationError && (
+        <ThemedText style={[styles.locationError, themed.locationError]}>{locationError}</ThemedText>
+      )}
 
       <Pressable
         onPress={handleSubmit}
-        style={({ pressed }) => [styles.submitButton, { opacity: pressed ? 0.7 : 1 }]}
+        style={({ pressed }) => [styles.submitButton, themed.submitButton, { opacity: pressed ? 0.7 : 1 }]}
       >
-        <ThemedText style={styles.submitButtonText}>Save Results</ThemedText>
+        <Text style={[styles.submitButtonText, themed.submitButtonText]}>Save Results</Text>
       </Pressable>
 
       <Pressable
         onPress={() => router.back()}
         style={({ pressed }) => [styles.cancelButton, { opacity: pressed ? 0.7 : 1 }]}
       >
-        <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+        <Text style={[styles.cancelButtonText, themed.cancelButtonText]}>Cancel</Text>
       </Pressable>
     </AppScreen>
   );
@@ -159,21 +189,18 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D0D5DD',
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
-    backgroundColor: '#fff',
+    fontSize: 16,
   },
   submitButton: {
-    backgroundColor: '#0a7ea4',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
   submitButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -183,36 +210,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#0a7ea4',
     fontSize: 16,
     fontWeight: '600',
   },
   uploadButton: {
-    backgroundColor: '#0a7ea4',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 8,
   },
   uploadButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   uploadedFileName: {
     fontSize: 14,
-    color: '#4CAF50',
     marginBottom: 12,
   },
   locationButton: {
-    backgroundColor: '#4CAF50',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 8,
   },
   locationButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -222,7 +243,6 @@ const styles = StyleSheet.create({
   },
   locationError: {
     fontSize: 14,
-    color: '#FF6B6B',
     marginBottom: 12,
   },
 });

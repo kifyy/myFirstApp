@@ -1,16 +1,43 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { ACTIVITIES } from '@/constants/activities';
 import { useChallengeTimer } from '@/contexts/challenge-timer-context';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { formatCountdown } from '@/lib/format-countdown';
 
 export default function ChallengesScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const { timer, isRunning, remainingMs, startChallenge, leaveChallenge } = useChallengeTimer();
+
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        timerBanner: {
+          backgroundColor: colors.timerBannerBg,
+          borderColor: colors.timerBannerBorder,
+        },
+        timerLabel: { color: colors.timerBannerLabel },
+        timerValue: { color: colors.timerBannerAccent },
+        timerActivity: { color: colors.timerBannerSubtext },
+        card: { borderColor: colors.border },
+        cardActive: { borderColor: colors.timerBannerBorder },
+        runningLabel: { color: colors.timerBannerAccent },
+        startButton: { backgroundColor: colors.tint },
+        startButtonDisabled: { backgroundColor: colors.disabled },
+        startButtonText: { color: colors.onTint },
+        startButtonTextDisabled: { color: colors.surface },
+        leaveButton: { backgroundColor: colors.danger },
+        leaveButtonText: { color: colors.onTint },
+        textDisabled: { color: colors.disabled },
+      }),
+    [colors]
+  );
 
   const handleStartPress = (activityKey: string, activityTitle: string, route: string) => {
     if (isRunning) {
@@ -50,14 +77,14 @@ export default function ChallengesScreen() {
         Challenges
       </ThemedText>
       {isRunning && timer ? (
-        <View style={styles.timerBanner}>
-          <ThemedText style={styles.timerLabel}>Challenge in progress</ThemedText>
-          <ThemedText style={styles.timerValue}>{formatCountdown(remainingMs)}</ThemedText>
-          <ThemedText style={styles.timerActivity}>{timer.activityTitle}</ThemedText>
+        <View style={[styles.timerBanner, themed.timerBanner]}>
+          <Text style={[styles.timerLabel, themed.timerLabel]}>Challenge in progress</Text>
+          <Text style={[styles.timerValue, themed.timerValue]}>{formatCountdown(remainingMs)}</Text>
+          <Text style={[styles.timerActivity, themed.timerActivity]}>{timer.activityTitle}</Text>
           <Pressable
             onPress={handleLeaveChallenge}
-            style={({ pressed }) => [styles.leaveButton, { opacity: pressed ? 0.85 : 1 }]}>
-            <ThemedText style={styles.leaveButtonText}>Leave Challenge</ThemedText>
+            style={({ pressed }) => [styles.leaveButton, themed.leaveButton, { opacity: pressed ? 0.85 : 1 }]}>
+            <Text style={[styles.leaveButtonText, themed.leaveButtonText]}>Leave Challenge</Text>
           </Pressable>
         </View>
       ) : null}
@@ -69,25 +96,34 @@ export default function ChallengesScreen() {
           return (
             <View
               key={activity.key}
-              style={[styles.card, isActive && styles.cardActive, isDisabled && styles.cardDisabled]}>
+              style={[
+                styles.card,
+                themed.card,
+                isActive && themed.cardActive,
+                isDisabled && styles.cardDisabled,
+              ]}>
               <Image source={activity.image} style={[styles.image, isDisabled && styles.imageDisabled]} />
               <View style={styles.cardBody}>
-                <ThemedText type="subtitle" style={isDisabled ? styles.textDisabled : undefined}>
+                <ThemedText type="subtitle" style={isDisabled ? themed.textDisabled : undefined}>
                   {activity.title}
                 </ThemedText>
-                <ThemedText style={[styles.description, isDisabled && styles.textDisabled]}>
+                <ThemedText style={[styles.description, isDisabled && themed.textDisabled]}>
                   {activity.description}
                 </ThemedText>
                 {isActive && isRunning ? (
-                  <ThemedText style={styles.runningLabel}>
+                  <Text style={[styles.runningLabel, themed.runningLabel]}>
                     Running · {formatCountdown(remainingMs)}
-                  </ThemedText>
+                  </Text>
                 ) : null}
                 {isActive && isRunning ? (
                   <Pressable
                     onPress={handleLeaveChallenge}
-                    style={({ pressed }) => [styles.leaveButtonInline, { opacity: pressed ? 0.85 : 1 }]}>
-                    <ThemedText style={styles.leaveButtonText}>Leave Challenge</ThemedText>
+                    style={({ pressed }) => [
+                      styles.leaveButtonInline,
+                      themed.leaveButton,
+                      { opacity: pressed ? 0.85 : 1 },
+                    ]}>
+                    <Text style={[styles.leaveButtonText, themed.leaveButtonText]}>Leave Challenge</Text>
                   </Pressable>
                 ) : (
                   <Pressable
@@ -95,12 +131,16 @@ export default function ChallengesScreen() {
                     disabled={isDisabled}
                     style={({ pressed }) => [
                       styles.startButton,
-                      isDisabled && styles.startButtonDisabled,
+                      isDisabled ? themed.startButtonDisabled : themed.startButton,
                       { opacity: pressed && !isDisabled ? 0.85 : 1 },
                     ]}>
-                    <ThemedText style={[styles.startButtonText, isDisabled && styles.startButtonTextDisabled]}>
+                    <Text
+                      style={[
+                        styles.startButtonText,
+                        isDisabled ? themed.startButtonTextDisabled : themed.startButtonText,
+                      ]}>
                       Start
-                    </ThemedText>
+                    </Text>
                   </Pressable>
                 )}
               </View>
@@ -121,8 +161,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   timerBanner: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#F97316',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -132,16 +170,13 @@ const styles = StyleSheet.create({
   timerLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#C2410C',
   },
   timerValue: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#EA580C',
   },
   timerActivity: {
     fontSize: 14,
-    color: '#9A3412',
   },
   leaveButton: {
     marginTop: 8,
@@ -149,17 +184,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
-    backgroundColor: '#DC2626',
   },
   leaveButtonInline: {
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
-    backgroundColor: '#DC2626',
   },
   leaveButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -172,12 +204,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e6e6e6',
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  cardActive: {
-    borderColor: '#F97316',
   },
   cardDisabled: {
     opacity: 0.55,
@@ -199,30 +227,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  textDisabled: {
-    color: '#9CA3AF',
-  },
   runningLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#EA580C',
   },
   startButton: {
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
-    backgroundColor: '#0a7ea4',
-  },
-  startButtonDisabled: {
-    backgroundColor: '#9CA3AF',
   },
   startButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  startButtonTextDisabled: {
-    color: '#F3F4F6',
   },
 });

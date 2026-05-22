@@ -1,13 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { type LeaderboardEntry } from '@/constants/leaderboard';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { getLeaderboardEntryId, loadLeaderboard, sortLeaderboardEntries } from '@/lib/leaderboard-storage';
 
 const COLUMNS = [
@@ -19,11 +19,24 @@ const COLUMNS = [
 
 export default function LeaderboardScreen() {
   const { profile } = useUserProfile();
+  const { colors } = useAppTheme();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const borderColor = useThemeColor({ light: '#E5E7EB', dark: '#374151' }, 'text');
-  const headerBackground = useThemeColor({ light: '#F3F4F6', dark: '#1F2937' }, 'background');
-  const iconColor = useThemeColor({ light: '#6B7280', dark: '#9CA3AF' }, 'icon');
-  const rowAltBackground = useThemeColor({ light: 'rgba(0,0,0,0.03)', dark: 'rgba(255,255,255,0.04)' }, 'background');
+
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        headerRow: { backgroundColor: colors.surface },
+        userBar: {
+          backgroundColor: colors.userBarBg,
+          borderColor: colors.userBarBorder,
+        },
+        userBarLabel: { color: colors.userBarLabel },
+        userBarCaption: { color: colors.userBarCaption },
+        userBarValue: { color: colors.onTint },
+        userBarPoints: { color: colors.onTint },
+      }),
+    [colors]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -74,11 +87,11 @@ export default function LeaderboardScreen() {
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
         showsVerticalScrollIndicator>
-        <View style={[styles.table, { borderColor }]}>
-          <View style={[styles.headerRow, { backgroundColor: headerBackground, borderColor }]}>
+        <View style={[styles.table, { borderColor: colors.border }]}>
+          <View style={[styles.headerRow, themed.headerRow, { borderColor: colors.border }]}>
             {COLUMNS.map((column) => (
               <View key={column.key} style={[styles.headerCell, { flex: column.flex }]}>
-                <IconSymbol name={column.icon} size={16} color={iconColor} />
+                <IconSymbol name={column.icon} size={16} color={colors.icon} />
                 <ThemedText style={styles.headerLabel} numberOfLines={1}>
                   {column.label}
                 </ThemedText>
@@ -98,14 +111,14 @@ export default function LeaderboardScreen() {
                 key={entry.id}
                 style={[
                   styles.dataRow,
-                  { borderColor },
-                  index % 2 === 1 && { backgroundColor: rowAltBackground },
+                  { borderColor: colors.border },
+                  index % 2 === 1 && { backgroundColor: colors.surfaceAlt },
                 ]}>
                 <View style={[styles.cell, { flex: COLUMNS[0].flex }]}>
                   <IconSymbol
                     name="trophy.fill"
                     size={14}
-                    color={index === 0 ? '#F59E0B' : iconColor}
+                    color={index === 0 ? colors.gold : colors.icon}
                   />
                   <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
                 </View>
@@ -120,7 +133,7 @@ export default function LeaderboardScreen() {
                   </ThemedText>
                 </View>
                 <View style={[styles.cell, { flex: COLUMNS[3].flex }]}>
-                  <IconSymbol name="star.fill" size={14} color="#F59E0B" />
+                  <IconSymbol name="star.fill" size={14} color={colors.gold} />
                   <ThemedText style={styles.pointsText}>{entry.points}</ThemedText>
                 </View>
               </View>
@@ -130,28 +143,28 @@ export default function LeaderboardScreen() {
       </ScrollView>
 
       {currentUserStats ? (
-        <View style={styles.userBar}>
-          <ThemedText style={styles.userBarLabel}>Your stats</ThemedText>
+        <View style={[styles.userBar, themed.userBar]}>
+          <Text style={[styles.userBarLabel, themed.userBarLabel]}>Your stats</Text>
           <View style={styles.userBarRow}>
             <View style={[styles.userBarCell, { flex: COLUMNS[0].flex }]}>
-              <IconSymbol name="trophy.fill" size={16} color="#0a7ea4" />
-              <ThemedText style={styles.userBarValue}>{currentUserStats.rank}</ThemedText>
+              <IconSymbol name="trophy.fill" size={16} color={colors.onTint} />
+              <Text style={[styles.userBarValue, themed.userBarValue]}>{currentUserStats.rank}</Text>
             </View>
             <View style={[styles.userBarCell, { flex: COLUMNS[1].flex }]}>
-              <ThemedText style={styles.userBarCaption}>Team</ThemedText>
-              <ThemedText style={styles.userBarValue} numberOfLines={1}>
+              <Text style={[styles.userBarCaption, themed.userBarCaption]}>Team</Text>
+              <Text style={[styles.userBarValue, themed.userBarValue]} numberOfLines={1}>
                 {currentUserStats.team}
-              </ThemedText>
+              </Text>
             </View>
             <View style={[styles.userBarCell, { flex: COLUMNS[2].flex }]}>
-              <ThemedText style={styles.userBarCaption}>Name</ThemedText>
-              <ThemedText style={styles.userBarValue} numberOfLines={1}>
+              <Text style={[styles.userBarCaption, themed.userBarCaption]}>Name</Text>
+              <Text style={[styles.userBarValue, themed.userBarValue]} numberOfLines={1}>
                 {currentUserStats.name}
-              </ThemedText>
+              </Text>
             </View>
             <View style={[styles.userBarCell, { flex: COLUMNS[3].flex }]}>
-              <IconSymbol name="star.fill" size={16} color="#F59E0B" />
-              <ThemedText style={styles.userBarPoints}>{currentUserStats.points}</ThemedText>
+              <IconSymbol name="star.fill" size={16} color={colors.gold} />
+              <Text style={[styles.userBarPoints, themed.userBarPoints]}>{currentUserStats.points}</Text>
             </View>
           </View>
         </View>
@@ -237,9 +250,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: '#0a7ea4',
     borderWidth: 2,
-    borderColor: '#085f7a',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.15,
@@ -247,7 +258,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   userBarLabel: {
-    color: '#E0F2FE',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.6,
@@ -263,18 +273,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   userBarCaption: {
-    color: '#BAE6FD',
     fontSize: 10,
     fontWeight: '600',
     marginBottom: 2,
   },
   userBarValue: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '700',
   },
   userBarPoints: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '800',
   },
