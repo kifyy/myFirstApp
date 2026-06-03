@@ -1,5 +1,3 @@
-export const RECORD_RESULTS_DRAFT_KEY = 'activity-1-record-results-draft';
-
 export type RecordResultsDraft = {
   test1: string;
   test2: string;

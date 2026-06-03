@@ -34,7 +34,11 @@ function RootLayoutContent() {
         <Stack.Screen name="activity-1" options={{ headerShown: false }} />
         <Stack.Screen name="activity-2" options={{ headerShown: false }} />
         <Stack.Screen name="activity-3" options={{ headerShown: false }} />
+        <Stack.Screen name="activity-4" options={{ headerShown: false }} />
         <Stack.Screen name="activity-1/record-results" options={{ headerShown: false }} />
+        <Stack.Screen name="activity-2/record-results" options={{ headerShown: false }} />
+        <Stack.Screen name="activity-3/record-results" options={{ headerShown: false }} />
+        <Stack.Screen name="activity-4/record-results" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

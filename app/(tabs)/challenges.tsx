@@ -51,7 +51,7 @@ export default function ChallengesScreen() {
         onPress: () => {
           void (async () => {
             await startChallenge(activityKey, activityTitle);
-            router.push(route as '/activity-1' | '/activity-2' | '/activity-3');
+            router.push(route as '/activity-1' | '/activity-2' | '/activity-3' | '/activity-4');
           })();
         },
       },

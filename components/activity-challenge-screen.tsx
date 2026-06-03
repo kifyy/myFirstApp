@@ -1,0 +1,395 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppScreen } from '@/components/app-screen';
+import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { RecordResultsDraftBar } from '@/components/record-results-draft-bar';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Collapsible } from '@/components/ui/collapsible';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import {
+  getActivityContent,
+  type ActivityKey,
+} from '@/constants/activity-content';
+import {
+  getAttemptsStorageKey,
+  getRatingStorageKey,
+  type ActivityAttempt,
+} from '@/constants/activity-attempt';
+import { type RecordResultsDraft } from '@/constants/record-results-draft';
+import { useAppTheme } from '@/hooks/use-app-theme';
+import {
+  clearRecordResultsDraft,
+  loadRecordResultsDraft,
+} from '@/lib/record-results-draft';
+
+type ActivityChallengeScreenProps = {
+  activityKey: ActivityKey;
+};
+
+export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreenProps) {
+  const router = useRouter();
+  const content = getActivityContent(activityKey);
+  const [speakingStep, setSpeakingStep] = useState<number | null>(null);
+  const [rating, setRating] = useState(0);
+  const [attempts, setAttempts] = useState<ActivityAttempt[]>([]);
+  const [draft, setDraft] = useState<RecordResultsDraft | null>(null);
+  const { colors } = useAppTheme();
+  const stepBoxBackground = colors.card;
+  const stepBoxBorder = colors.borderStrong;
+
+  const recordResultsPath = `/${activityKey}/record-results` as const;
+
+  const themed = useMemo(
+    () =>
+      StyleSheet.create({
+        recordButton: { backgroundColor: colors.tint },
+        recordButtonText: { color: colors.onTint },
+        deleteAttemptButton: { backgroundColor: colors.dangerSurface },
+        deleteAttemptText: { color: colors.danger },
+        attemptCard: { borderColor: colors.borderStrong, backgroundColor: colors.card },
+        attemptsEmpty: { color: colors.muted },
+        attemptDate: { color: colors.muted },
+        ratingDisplay: { color: colors.muted },
+      }),
+    [colors]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        try {
+          const [savedRating, savedAttempts] = await Promise.all([
+            AsyncStorage.getItem(getRatingStorageKey(activityKey)),
+            AsyncStorage.getItem(getAttemptsStorageKey(activityKey)),
+          ]);
+
+          if (savedRating) {
+            setRating(parseInt(savedRating, 10));
+          }
+
+          if (savedAttempts) {
+            setAttempts(JSON.parse(savedAttempts) as ActivityAttempt[]);
+          }
+        } catch (error) {
+          console.error('Error loading activity data:', error);
+        }
+      };
+
+      const loadDraft = async () => {
+        const savedDraft = await loadRecordResultsDraft(activityKey);
+        setDraft(savedDraft);
+      };
+
+      loadData();
+      loadDraft();
+    }, [activityKey])
+  );
+
+  const handleContinueDraft = () => {
+    router.push(recordResultsPath);
+  };
+
+  const handleDeleteDraft = async () => {
+    await clearRecordResultsDraft(activityKey);
+    setDraft(null);
+  };
+
+  const handleRating = async (stars: number) => {
+    try {
+      setRating(stars);
+      await AsyncStorage.setItem(getRatingStorageKey(activityKey), stars.toString());
+    } catch (error) {
+      console.error('Error saving rating:', error);
+    }
+  };
+
+  const handleDeleteAttempt = (index: number) => {
+    Alert.alert(
+      'Delete Attempt',
+      'Are you sure you want to delete this attempt?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const nextAttempts = attempts.filter((_, attemptIndex) => attemptIndex !== index);
+              setAttempts(nextAttempts);
+              await AsyncStorage.setItem(getAttemptsStorageKey(activityKey), JSON.stringify(nextAttempts));
+            } catch (error) {
+              console.error('Error deleting attempt:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSpeak = async (stepIndex: number) => {
+    if (speakingStep === stepIndex) {
+      await Speech.stop();
+      setSpeakingStep(null);
+    } else {
+      if (speakingStep !== null) {
+        await Speech.stop();
+      }
+      setSpeakingStep(stepIndex);
+      await Speech.speak(content.steps[stepIndex], {
+        rate: 0.9,
+        pitch: 0.8,
+        onDone: () => setSpeakingStep(null),
+        onError: () => setSpeakingStep(null),
+      });
+    }
+  };
+
+  return (
+    <AppScreen style={styles.screen}>
+      <Pressable
+        onPress={() => router.push('/(tabs)/activities')}
+        style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.7 : 1 }]}
+        accessibilityLabel="Return to Activities">
+        <IconSymbol name="chevron.left" size={26} color={colors.tint} />
+      </Pressable>
+      <View style={[styles.main, draft ? styles.mainWithDraft : undefined]}>
+        <ParallaxScrollView
+          headerBackgroundColor={{ light: colors.parallaxHeader, dark: colors.parallaxHeader }}
+          headerImage={
+            <Image
+              source={require('@/assets/images/partial-react-logo.png')}
+              style={styles.reactLogo}
+            />
+          }>
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="title">{content.title}</ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.stepContainer}>
+            <Collapsible title="Overview">
+              <ThemedView
+                style={[
+                  styles.stepBox,
+                  { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
+                ]}>
+                <ThemedText style={styles.stepText}>{content.overview}</ThemedText>
+              </ThemedView>
+            </Collapsible>
+
+            <Collapsible title="Equipment">
+              <ThemedView
+                style={[
+                  styles.stepBox,
+                  { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
+                ]}>
+                {content.equipment.map((item) => (
+                  <ThemedText key={item} style={styles.stepText}>
+                    - {item}
+                  </ThemedText>
+                ))}
+              </ThemedView>
+            </Collapsible>
+
+            <Collapsible title="Instructions">
+              <ThemedView
+                style={[
+                  styles.stepBox,
+                  { backgroundColor: stepBoxBackground, borderColor: stepBoxBorder },
+                ]}>
+                {content.steps.map((text, index) => (
+                  <ThemedView key={index} style={styles.stepItem}>
+                    <ThemedText type="subtitle">Step {index + 1}</ThemedText>
+                    <ThemedText style={styles.stepText}>{text}</ThemedText>
+                    <Pressable
+                      onPress={() => handleSpeak(index)}
+                      style={({ pressed }) => [styles.button, { opacity: pressed ? 0.6 : 1 }]}>
+                      <ThemedText type="link">{speakingStep === index ? 'Stop' : '🔊 Listen'}</ThemedText>
+                    </Pressable>
+                  </ThemedView>
+                ))}
+              </ThemedView>
+            </Collapsible>
+          </ThemedView>
+
+          <ThemedView style={styles.recordSection}>
+            <Pressable
+              onPress={() => router.push(recordResultsPath)}
+              style={({ pressed }) => [
+                styles.recordButton,
+                themed.recordButton,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}>
+              <Text style={[styles.recordButtonText, themed.recordButtonText]}>📝 Record Results</Text>
+            </Pressable>
+          </ThemedView>
+
+          <ThemedView style={styles.attemptsSection}>
+            <ThemedText type="defaultSemiBold">Attempts</ThemedText>
+            {attempts.length === 0 ? (
+              <ThemedText style={[styles.attemptsEmpty, themed.attemptsEmpty]}>
+                Try the experiment to add a new attempt!
+              </ThemedText>
+            ) : (
+              attempts.map((attempt, index) => (
+                <ThemedView key={index} style={[styles.attemptCard, themed.attemptCard]}>
+                  <ThemedText type="defaultSemiBold">Attempt {index + 1}</ThemedText>
+                  <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
+                  <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
+                  <ThemedText style={styles.attemptText}>Test 3: {attempt.test3}</ThemedText>
+                  {attempt.uploadedVideo ? (
+                    <ThemedText style={styles.attemptText}>Video: {attempt.uploadedVideo}</ThemedText>
+                  ) : null}
+                  {attempt.location ? (
+                    <ThemedView style={styles.locationBoxInline}>
+                      <ThemedText style={styles.locationText}>
+                        Lat: {attempt.location.latitude.toFixed(6)}
+                      </ThemedText>
+                      <ThemedText style={styles.locationText}>
+                        Lon: {attempt.location.longitude.toFixed(6)}
+                      </ThemedText>
+                      <ThemedText style={styles.locationText}>
+                        Acc: {Math.round(attempt.location.accuracy)} m
+                      </ThemedText>
+                    </ThemedView>
+                  ) : null}
+                  <ThemedText style={[styles.attemptDate, themed.attemptDate]}>
+                    {new Date(attempt.createdAt).toLocaleString()}
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => handleDeleteAttempt(index)}
+                    style={({ pressed }) => [
+                      styles.deleteAttemptButton,
+                      themed.deleteAttemptButton,
+                      { opacity: pressed ? 0.7 : 1 },
+                    ]}>
+                    <ThemedText style={[styles.deleteAttemptText, themed.deleteAttemptText]}>
+                      Delete Attempt
+                    </ThemedText>
+                  </Pressable>
+                </ThemedView>
+              ))
+            )}
+          </ThemedView>
+
+          <ThemedView style={styles.ratingSection}>
+            <ThemedText type="defaultSemiBold">Rate Activity</ThemedText>
+            <ThemedView style={styles.starContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable key={star} onPress={() => handleRating(star)} style={styles.starButton}>
+                  <ThemedText style={styles.star}>{star <= rating ? '⭐' : '☆'}</ThemedText>
+                </Pressable>
+              ))}
+            </ThemedView>
+            {rating > 0 ? (
+              <ThemedText style={[styles.ratingDisplay, themed.ratingDisplay]}>
+                You rated: {rating} out of 5 stars
+              </ThemedText>
+            ) : null}
+          </ThemedView>
+        </ParallaxScrollView>
+      </View>
+      {draft ? (
+        <RecordResultsDraftBar
+          draft={draft}
+          onContinue={handleContinueDraft}
+          onDelete={() => {
+            void handleDeleteDraft();
+          }}
+        />
+      ) : null}
+    </AppScreen>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  backButton: {
+    position: 'absolute',
+    top: 4,
+    left: 8,
+    zIndex: 20,
+    padding: 8,
+  },
+  main: { flex: 1 },
+  mainWithDraft: { paddingBottom: 100 },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 40,
+  },
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  stepBox: {
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 16,
+    gap: 12,
+  },
+  stepItem: { gap: 8, marginBottom: 16 },
+  stepText: { lineHeight: 24 },
+  button: { paddingVertical: 8 },
+  recordSection: {
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  recordButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  recordButtonText: { fontSize: 16, fontWeight: '600' },
+  attemptsSection: {
+    gap: 12,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  attemptsEmpty: { fontSize: 14 },
+  attemptCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
+  deleteAttemptButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  deleteAttemptText: { fontSize: 14, fontWeight: '600' },
+  attemptText: { fontSize: 14, marginTop: 4 },
+  attemptDate: { fontSize: 12, marginTop: 8 },
+  locationBoxInline: { marginTop: 8 },
+  locationText: { fontSize: 14, lineHeight: 20 },
+  ratingSection: {
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  starContainer: { flexDirection: 'row', gap: 8 },
+  starButton: { padding: 4 },
+  star: { fontSize: 32 },
+  ratingDisplay: { fontSize: 14, paddingHorizontal: 8 },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+  },
+});

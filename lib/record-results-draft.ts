@@ -1,12 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-  RECORD_RESULTS_DRAFT_KEY,
-  type RecordResultsDraft,
-  type RecordResultsFormFields,
-} from '@/constants/record-results-draft';
-
-const ATTEMPTS_KEY = 'activity-1-attempts';
+  getAttemptsStorageKey,
+  getRecordResultsDraftKey,
+} from '@/constants/activity-attempt';
+import type { RecordResultsDraft, RecordResultsFormFields } from '@/constants/record-results-draft';
 
 export function formHasContent(fields: RecordResultsFormFields): boolean {
   return (
@@ -19,9 +17,9 @@ export function formHasContent(fields: RecordResultsFormFields): boolean {
   );
 }
 
-export async function getNextAttemptNumber(): Promise<number> {
+export async function getNextAttemptNumber(activityKey: string): Promise<number> {
   try {
-    const saved = await AsyncStorage.getItem(ATTEMPTS_KEY);
+    const saved = await AsyncStorage.getItem(getAttemptsStorageKey(activityKey));
     if (!saved) {
       return 1;
     }
@@ -32,9 +30,9 @@ export async function getNextAttemptNumber(): Promise<number> {
   }
 }
 
-export async function loadRecordResultsDraft(): Promise<RecordResultsDraft | null> {
+export async function loadRecordResultsDraft(activityKey: string): Promise<RecordResultsDraft | null> {
   try {
-    const stored = await AsyncStorage.getItem(RECORD_RESULTS_DRAFT_KEY);
+    const stored = await AsyncStorage.getItem(getRecordResultsDraftKey(activityKey));
     if (!stored) {
       return null;
     }
@@ -46,6 +44,7 @@ export async function loadRecordResultsDraft(): Promise<RecordResultsDraft | nul
 }
 
 export async function saveRecordResultsDraft(
+  activityKey: string,
   fields: RecordResultsFormFields,
   attemptNumber: number
 ): Promise<void> {
@@ -53,9 +52,9 @@ export async function saveRecordResultsDraft(
     ...fields,
     attemptNumber,
   };
-  await AsyncStorage.setItem(RECORD_RESULTS_DRAFT_KEY, JSON.stringify(draft));
+  await AsyncStorage.setItem(getRecordResultsDraftKey(activityKey), JSON.stringify(draft));
 }
 
-export async function clearRecordResultsDraft(): Promise<void> {
-  await AsyncStorage.removeItem(RECORD_RESULTS_DRAFT_KEY);
+export async function clearRecordResultsDraft(activityKey: string): Promise<void> {
+  await AsyncStorage.removeItem(getRecordResultsDraftKey(activityKey));
 }

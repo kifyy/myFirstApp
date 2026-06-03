@@ -3,7 +3,7 @@ export type ActivityItem = {
   title: string;
   description: string;
   image: number;
-  route: 'activity-1' | 'activity-2' | 'activity-3';
+  route: 'activity-1' | 'activity-2' | 'activity-3' | 'activity-4';
 };
 
 export const ACTIVITIES: ActivityItem[] = [
@@ -17,15 +17,22 @@ export const ACTIVITIES: ActivityItem[] = [
   {
     key: 'activity-2',
     title: 'Sound Pollution Hunter',
-    description: 'Sound Pollution Hunter description.',
+    description: 'Measure and compare sound levels.',
     image: require('@/assets/images/partial-react-logo.png'),
     route: 'activity-2',
   },
   {
     key: 'activity-3',
     title: 'Hand Fan Challenge',
-    description: 'Hand Fan Challenge description.',
+    description: 'Test how air movement affects flexible materials',
     image: require('@/assets/images/partial-react-logo.png'),
     route: 'activity-3',
+  },
+  {
+    key: 'activity-4',
+    title: 'Earthquake-Resistant Structure',
+    description: 'Design structures that withstand vibration, simulating earthquakes.',
+    image: require('@/assets/images/partial-react-logo.png'),
+    route: 'activity-4',
   },
 ];

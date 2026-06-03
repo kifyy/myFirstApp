@@ -1,12 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type ActivityAttempt = {
-  createdAt: string;
-};
+import { getAttemptsStorageKey, type ActivityAttempt } from '@/constants/activity-attempt';
 
-export function getAttemptsStorageKey(activityKey: string): string {
-  return `${activityKey}-attempts`;
-}
+export type { ActivityAttempt };
 
 export async function getActivityAttempts(activityKey: string): Promise<ActivityAttempt[]> {
   try {
