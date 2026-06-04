@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,7 +8,7 @@ import { AppScreen } from '@/components/app-screen';
 import { DecibelRecorder } from '@/components/decibel-recorder';
 import { SoundZoneMap } from '@/components/sound-zone-map';
 import { ThemedText } from '@/components/themed-text';
-import { getAttemptsStorageKey } from '@/constants/activity-attempt';
+import { loadActivityAttempts, saveActivityAttempts } from '@/lib/db';
 import {
   MAX_SOUND_ACTIONS,
   createEmptySoundAction,
@@ -146,10 +145,9 @@ export function SoundPollutionRecordResultsScreen() {
         uploadedVideo,
         createdAt: new Date().toISOString(),
       };
-      const saved = await AsyncStorage.getItem(getAttemptsStorageKey('activity-2'));
-      const attempts = saved ? (JSON.parse(saved) as SoundPollutionActivityAttempt[]) : [];
+      const attempts = await loadActivityAttempts<SoundPollutionActivityAttempt>('activity-2');
       attempts.push(attempt);
-      await AsyncStorage.setItem(getAttemptsStorageKey('activity-2'), JSON.stringify(attempts));
+      await saveActivityAttempts('activity-2', attempts);
       await clearSoundPollutionRecordResultsDraft();
       await reportAttemptRecorded('activity-2');
       router.back();

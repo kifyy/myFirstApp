@@ -1,29 +1,23 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { getAttemptsStorageKey, type ActivityAttempt } from '@/constants/activity-attempt';
+import type { ActivityAttempt } from '@/constants/activity-attempt';
+import { getActivityAttemptCount, loadActivityAttempts } from '@/lib/db';
 
 export type { ActivityAttempt };
 
-export async function getActivityAttempts(activityKey: string): Promise<ActivityAttempt[]> {
+export async function getActivityAttempts(
+  activityKey: string
+): Promise<Array<{ createdAt: string }>> {
   try {
-    const stored = await AsyncStorage.getItem(getAttemptsStorageKey(activityKey));
-    if (!stored) {
-      return [];
-    }
-    return JSON.parse(stored) as ActivityAttempt[];
+    return await loadActivityAttempts<{ createdAt: string }>(activityKey);
   } catch (error) {
     console.error('Error loading activity attempts:', error);
     return [];
   }
 }
 
-export async function getActivityAttemptCount(activityKey: string): Promise<number> {
-  const attempts = await getActivityAttempts(activityKey);
-  return attempts.length;
-}
+export { getActivityAttemptCount };
 
 export function hasAttemptDuringChallenge(
-  attempts: ActivityAttempt[],
+  attempts: { createdAt: string }[],
   startedAt: number,
   endsAt: number
 ): boolean {

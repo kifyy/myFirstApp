@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
   useCallback,
@@ -15,12 +14,14 @@ import {
   getActivityAttempts,
   hasAttemptDuringChallenge,
 } from '@/lib/activity-attempts';
+import { CHALLENGE_DURATION_MS, type ChallengeTimerState } from '@/constants/challenge-timer';
 import {
-  CHALLENGE_DURATION_MS,
-  CHALLENGE_TIMER_STORAGE_KEY,
-  type ChallengeTimerState,
-} from '@/constants/challenge-timer';
-import { USER_PROFILE_STORAGE_KEY, type UserProfile } from '@/constants/user-profile';
+  clearChallengeTimer,
+  initDatabase,
+  loadChallengeTimer,
+  loadUserProfile,
+  saveChallengeTimer,
+} from '@/lib/db';
 import {
   dismissChallengeCountdownNotification,
   showChallengeCountdownNotification,
@@ -55,15 +56,6 @@ function normalizeTimerState(raw: ChallengeTimerState): ChallengeTimerState {
   };
 }
 
-async function loadUserProfile(): Promise<UserProfile | null> {
-  try {
-    const stored = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
-    return stored ? (JSON.parse(stored) as UserProfile) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ChallengeTimerProvider({ children }: { children: React.ReactNode }) {
   const [timer, setTimer] = useState<ChallengeTimerState | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
@@ -82,14 +74,14 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
 
   const persistTimer = useCallback(async (state: ChallengeTimerState | null) => {
     if (!state) {
-      await AsyncStorage.removeItem(CHALLENGE_TIMER_STORAGE_KEY);
+      await clearChallengeTimer();
       return;
     }
-    await AsyncStorage.setItem(CHALLENGE_TIMER_STORAGE_KEY, JSON.stringify(state));
+    await saveChallengeTimer(state);
   }, []);
 
   const clearChallenge = useCallback(async () => {
-    await AsyncStorage.removeItem(CHALLENGE_TIMER_STORAGE_KEY);
+    await clearChallengeTimer();
     await dismissChallengeCountdownNotification();
     setTimer(null);
     syncRemaining(null);
@@ -110,7 +102,7 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
       try {
         if (completed) {
           if (!state.pointsAwarded) {
-            const profile = await loadUserProfile();
+            const { profile } = await loadUserProfile();
             if (profile) {
               await addLeaderboardPoint(profile);
             }
@@ -149,14 +141,15 @@ export function ChallengeTimerProvider({ children }: { children: React.ReactNode
 
   const refreshTimer = useCallback(async () => {
     try {
-      const stored = await AsyncStorage.getItem(CHALLENGE_TIMER_STORAGE_KEY);
+      await initDatabase();
+      const stored = await loadChallengeTimer();
       if (!stored) {
         setTimer(null);
         syncRemaining(null);
         return;
       }
 
-      const parsed = normalizeTimerState(JSON.parse(stored) as ChallengeTimerState);
+      const parsed = normalizeTimerState(stored);
       const remaining = getRemainingMs(parsed.endsAt);
 
       if (remaining <= 0) {

@@ -1,11 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { getAttemptsStorageKey, getRecordResultsDraftKey } from '@/constants/activity-attempt';
 import {
   createEmptySoundAction,
   type SoundPollutionRecordResultsDraft,
   type SoundPollutionRecordResultsFormFields,
 } from '@/constants/sound-pollution-attempt';
+import {
+  clearRecordResultsDraft,
+  getActivityAttemptCount,
+  loadRecordResultsDraftJson,
+  saveRecordResultsDraftJson,
+} from '@/lib/db';
 
 const ACTIVITY_KEY = 'activity-2';
 
@@ -24,12 +27,8 @@ export function soundPollutionFormHasContent(fields: SoundPollutionRecordResults
 
 export async function getSoundPollutionNextAttemptNumber(): Promise<number> {
   try {
-    const saved = await AsyncStorage.getItem(getAttemptsStorageKey(ACTIVITY_KEY));
-    if (!saved) {
-      return 1;
-    }
-    const attempts = JSON.parse(saved) as unknown[];
-    return attempts.length + 1;
+    const count = await getActivityAttemptCount(ACTIVITY_KEY);
+    return count + 1;
   } catch {
     return 1;
   }
@@ -37,11 +36,10 @@ export async function getSoundPollutionNextAttemptNumber(): Promise<number> {
 
 export async function loadSoundPollutionRecordResultsDraft(): Promise<SoundPollutionRecordResultsDraft | null> {
   try {
-    const stored = await AsyncStorage.getItem(getRecordResultsDraftKey(ACTIVITY_KEY));
-    if (!stored) {
+    const parsed = await loadRecordResultsDraftJson<SoundPollutionRecordResultsDraft>(ACTIVITY_KEY);
+    if (!parsed) {
       return null;
     }
-    const parsed = JSON.parse(stored) as SoundPollutionRecordResultsDraft;
     if (!Array.isArray(parsed.actions) || parsed.actions.length === 0) {
       parsed.actions = [createEmptySoundAction()];
     }
@@ -60,9 +58,9 @@ export async function saveSoundPollutionRecordResultsDraft(
     ...fields,
     attemptNumber,
   };
-  await AsyncStorage.setItem(getRecordResultsDraftKey(ACTIVITY_KEY), JSON.stringify(draft));
+  await saveRecordResultsDraftJson(ACTIVITY_KEY, draft);
 }
 
 export async function clearSoundPollutionRecordResultsDraft(): Promise<void> {
-  await AsyncStorage.removeItem(getRecordResultsDraftKey(ACTIVITY_KEY));
+  await clearRecordResultsDraft(ACTIVITY_KEY);
 }

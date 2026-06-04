@@ -1,10 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { getAttemptsStorageKey, getRecordResultsDraftKey } from '@/constants/activity-attempt';
 import type {
   ParachuteRecordResultsDraft,
   ParachuteRecordResultsFormFields,
 } from '@/constants/parachute-attempt';
+import {
+  clearRecordResultsDraft,
+  getActivityAttemptCount,
+  loadRecordResultsDraftJson,
+  saveRecordResultsDraftJson,
+} from '@/lib/db';
+
+const ACTIVITY_KEY = 'activity-1';
 
 export function parachuteFormHasContent(fields: ParachuteRecordResultsFormFields): boolean {
   return (
@@ -19,12 +24,8 @@ export function parachuteFormHasContent(fields: ParachuteRecordResultsFormFields
 
 export async function getParachuteNextAttemptNumber(): Promise<number> {
   try {
-    const saved = await AsyncStorage.getItem(getAttemptsStorageKey('activity-1'));
-    if (!saved) {
-      return 1;
-    }
-    const attempts = JSON.parse(saved) as unknown[];
-    return attempts.length + 1;
+    const count = await getActivityAttemptCount(ACTIVITY_KEY);
+    return count + 1;
   } catch {
     return 1;
   }
@@ -32,11 +33,10 @@ export async function getParachuteNextAttemptNumber(): Promise<number> {
 
 export async function loadParachuteRecordResultsDraft(): Promise<ParachuteRecordResultsDraft | null> {
   try {
-    const stored = await AsyncStorage.getItem(getRecordResultsDraftKey('activity-1'));
-    if (!stored) {
+    const parsed = await loadRecordResultsDraftJson<ParachuteRecordResultsDraft>(ACTIVITY_KEY);
+    if (!parsed) {
       return null;
     }
-    const parsed = JSON.parse(stored) as ParachuteRecordResultsDraft;
     if (!Array.isArray(parsed.parachuteTimes) || parsed.parachuteTimes.length === 0) {
       parsed.parachuteTimes = [''];
     }
@@ -55,12 +55,9 @@ export async function saveParachuteRecordResultsDraft(
     ...fields,
     attemptNumber,
   };
-  await AsyncStorage.setItem(
-    getRecordResultsDraftKey('activity-1'),
-    JSON.stringify(draft)
-  );
+  await saveRecordResultsDraftJson(ACTIVITY_KEY, draft);
 }
 
 export async function clearParachuteRecordResultsDraft(): Promise<void> {
-  await AsyncStorage.removeItem(getRecordResultsDraftKey('activity-1'));
+  await clearRecordResultsDraft(ACTIVITY_KEY);
 }

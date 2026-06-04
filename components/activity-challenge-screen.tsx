@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
@@ -19,11 +18,7 @@ import {
   getActivityContent,
   type ActivityKey,
 } from '@/constants/activity-content';
-import {
-  getAttemptsStorageKey,
-  getRatingStorageKey,
-  type ActivityAttempt,
-} from '@/constants/activity-attempt';
+import { type ActivityAttempt } from '@/constants/activity-attempt';
 import {
   isParachuteActivityAttempt,
   type ParachuteActivityAttempt,
@@ -33,6 +28,12 @@ import {
   type SoundPollutionActivityAttempt,
 } from '@/constants/sound-pollution-attempt';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import {
+  getActivityRating,
+  loadActivityAttempts,
+  saveActivityAttempts,
+  setActivityRating,
+} from '@/lib/db';
 import {
   clearParachuteRecordResultsDraft,
   loadParachuteRecordResultsDraft,
@@ -85,23 +86,14 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
       const loadData = async () => {
         try {
           const [savedRating, savedAttempts] = await Promise.all([
-            AsyncStorage.getItem(getRatingStorageKey(activityKey)),
-            AsyncStorage.getItem(getAttemptsStorageKey(activityKey)),
+            getActivityRating(activityKey),
+            loadActivityAttempts<
+              ActivityAttempt | ParachuteActivityAttempt | SoundPollutionActivityAttempt
+            >(activityKey),
           ]);
 
-          if (savedRating) {
-            setRating(parseInt(savedRating, 10));
-          }
-
-          if (savedAttempts) {
-            setAttempts(
-              JSON.parse(savedAttempts) as (
-                | ActivityAttempt
-                | ParachuteActivityAttempt
-                | SoundPollutionActivityAttempt
-              )[]
-            );
-          }
+          setRating(savedRating);
+          setAttempts(savedAttempts);
         } catch (error) {
           console.error('Error loading activity data:', error);
         }
@@ -145,7 +137,7 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const handleRating = async (stars: number) => {
     try {
       setRating(stars);
-      await AsyncStorage.setItem(getRatingStorageKey(activityKey), stars.toString());
+      await setActivityRating(activityKey, stars);
     } catch (error) {
       console.error('Error saving rating:', error);
     }
@@ -164,7 +156,7 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
             try {
               const nextAttempts = attempts.filter((_, attemptIndex) => attemptIndex !== index);
               setAttempts(nextAttempts);
-              await AsyncStorage.setItem(getAttemptsStorageKey(activityKey), JSON.stringify(nextAttempts));
+              await saveActivityAttempts(activityKey, nextAttempts);
             } catch (error) {
               console.error('Error deleting attempt:', error);
             }

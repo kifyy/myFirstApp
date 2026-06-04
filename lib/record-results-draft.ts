@@ -1,10 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import {
-  getAttemptsStorageKey,
-  getRecordResultsDraftKey,
-} from '@/constants/activity-attempt';
 import type { RecordResultsDraft, RecordResultsFormFields } from '@/constants/record-results-draft';
+import {
+  clearRecordResultsDraft as clearDraftInDb,
+  getActivityAttemptCount,
+  loadRecordResultsDraftJson,
+  saveRecordResultsDraftJson,
+} from '@/lib/db';
 
 export function formHasContent(fields: RecordResultsFormFields): boolean {
   return (
@@ -19,12 +19,8 @@ export function formHasContent(fields: RecordResultsFormFields): boolean {
 
 export async function getNextAttemptNumber(activityKey: string): Promise<number> {
   try {
-    const saved = await AsyncStorage.getItem(getAttemptsStorageKey(activityKey));
-    if (!saved) {
-      return 1;
-    }
-    const attempts = JSON.parse(saved) as unknown[];
-    return attempts.length + 1;
+    const count = await getActivityAttemptCount(activityKey);
+    return count + 1;
   } catch {
     return 1;
   }
@@ -32,11 +28,7 @@ export async function getNextAttemptNumber(activityKey: string): Promise<number>
 
 export async function loadRecordResultsDraft(activityKey: string): Promise<RecordResultsDraft | null> {
   try {
-    const stored = await AsyncStorage.getItem(getRecordResultsDraftKey(activityKey));
-    if (!stored) {
-      return null;
-    }
-    return JSON.parse(stored) as RecordResultsDraft;
+    return await loadRecordResultsDraftJson<RecordResultsDraft>(activityKey);
   } catch (error) {
     console.error('Error loading record results draft:', error);
     return null;
@@ -52,9 +44,9 @@ export async function saveRecordResultsDraft(
     ...fields,
     attemptNumber,
   };
-  await AsyncStorage.setItem(getRecordResultsDraftKey(activityKey), JSON.stringify(draft));
+  await saveRecordResultsDraftJson(activityKey, draft);
 }
 
 export async function clearRecordResultsDraft(activityKey: string): Promise<void> {
-  await AsyncStorage.removeItem(getRecordResultsDraftKey(activityKey));
+  await clearDraftInDb(activityKey);
 }

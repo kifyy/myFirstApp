@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -7,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { ACTIVITIES } from '@/constants/activities';
+import { getAllActivityRatings } from '@/lib/db';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function ActivitiesScreen() {
@@ -31,15 +31,10 @@ export default function ActivitiesScreen() {
 
       const loadRatings = async () => {
         try {
-          const storedRatings = await Promise.all(
-            ACTIVITIES.map(async (activity) => {
-              const storedValue = await AsyncStorage.getItem(`${activity.key}-rating`);
-              return [activity.key, storedValue ? parseInt(storedValue, 10) : 0] as const;
-            })
-          );
+          const storedRatings = await getAllActivityRatings();
 
           if (isActive) {
-            setRatings(Object.fromEntries(storedRatings));
+            setRatings(storedRatings);
           }
         } catch (error) {
           console.error('Error loading ratings:', error);

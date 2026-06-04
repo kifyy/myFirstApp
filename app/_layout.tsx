@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChallengeTimerProvider } from '@/contexts/challenge-timer-context';
 import { UserProfileProvider } from '@/contexts/user-profile-context';
 import { Colors } from '@/constants/theme';
+import { initDatabase } from '@/lib/db';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useNavigationTheme } from '@/hooks/use-navigation-theme';
 
@@ -22,6 +23,7 @@ function RootLayoutContent() {
   const backgroundColor = Colors[colorScheme === 'dark' ? 'dark' : 'light'].background;
 
   useEffect(() => {
+    void initDatabase();
     void SystemUI.setBackgroundColorAsync(backgroundColor);
   }, [backgroundColor]);
 

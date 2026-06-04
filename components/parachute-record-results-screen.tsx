@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -8,7 +7,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { AppScreen } from '@/components/app-screen';
 import { DecimalStopwatch } from '@/components/decimal-stopwatch';
 import { ThemedText } from '@/components/themed-text';
-import { getAttemptsStorageKey } from '@/constants/activity-attempt';
+import { loadActivityAttempts, saveActivityAttempts } from '@/lib/db';
 import {
   MAX_PARACHUTE_TESTS,
   type ParachuteActivityAttempt,
@@ -175,13 +174,9 @@ export function ParachuteRecordResultsScreen() {
         location,
         createdAt: new Date().toISOString(),
       };
-      const saved = await AsyncStorage.getItem(getAttemptsStorageKey('activity-1'));
-      const attempts = saved ? (JSON.parse(saved) as ParachuteActivityAttempt[]) : [];
+      const attempts = await loadActivityAttempts<ParachuteActivityAttempt>('activity-1');
       attempts.push(attempt);
-      await AsyncStorage.setItem(
-        getAttemptsStorageKey('activity-1'),
-        JSON.stringify(attempts)
-      );
+      await saveActivityAttempts('activity-1', attempts);
       await clearParachuteRecordResultsDraft();
       await reportAttemptRecorded('activity-1');
       router.back();

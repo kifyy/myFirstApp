@@ -1,7 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { LEADERBOARD_STORAGE_KEY, type LeaderboardEntry } from '@/constants/leaderboard';
+import type { LeaderboardEntry } from '@/constants/leaderboard';
 import type { UserProfile } from '@/constants/user-profile';
+import { loadLeaderboardEntries, saveLeaderboardEntries } from '@/lib/db';
 
 export function getLeaderboardEntryId(profile: UserProfile): string {
   return `${profile.teamName.trim().toLowerCase()}::${profile.firstName.trim().toLowerCase()}`;
@@ -9,11 +8,7 @@ export function getLeaderboardEntryId(profile: UserProfile): string {
 
 export async function loadLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
-    const stored = await AsyncStorage.getItem(LEADERBOARD_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    return JSON.parse(stored) as LeaderboardEntry[];
+    return await loadLeaderboardEntries();
   } catch (error) {
     console.error('Error loading leaderboard:', error);
     return [];
@@ -21,7 +16,7 @@ export async function loadLeaderboard(): Promise<LeaderboardEntry[]> {
 }
 
 export async function saveLeaderboard(entries: LeaderboardEntry[]): Promise<void> {
-  await AsyncStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(entries));
+  await saveLeaderboardEntries(entries);
 }
 
 export async function addLeaderboardPoint(profile: UserProfile): Promise<LeaderboardEntry[]> {
@@ -40,7 +35,7 @@ export async function addLeaderboardPoint(profile: UserProfile): Promise<Leaderb
     });
   }
 
-  const sorted = [...entries].sort((a, b) => b.points - a.points || a.team.localeCompare(b.team));
+  const sorted = sortLeaderboardEntries(entries);
   await saveLeaderboard(sorted);
   return sorted;
 }

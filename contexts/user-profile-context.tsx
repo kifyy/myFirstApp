@@ -1,11 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import {
-  ONBOARDING_COMPLETE_KEY,
-  USER_PROFILE_STORAGE_KEY,
-  type UserProfile,
-} from '@/constants/user-profile';
+import type { UserProfile } from '@/constants/user-profile';
+import { initDatabase, loadUserProfile, saveUserProfile } from '@/lib/db';
 
 type UserProfileContextValue = {
   profile: UserProfile | null;
@@ -24,13 +20,10 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
 
   const refreshProfile = useCallback(async () => {
     try {
-      const [storedProfile, onboardingFlag] = await Promise.all([
-        AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY),
-        AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
-      ]);
-
-      setProfile(storedProfile ? (JSON.parse(storedProfile) as UserProfile) : null);
-      setIsOnboardingComplete(onboardingFlag === 'true');
+      await initDatabase();
+      const { profile: storedProfile, onboardingComplete } = await loadUserProfile();
+      setProfile(storedProfile);
+      setIsOnboardingComplete(onboardingComplete);
     } catch (error) {
       console.error('Error loading user profile:', error);
       setProfile(null);
@@ -44,11 +37,8 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
     refreshProfile();
   }, [refreshProfile]);
 
-  const saveProfile = useCallback(async (nextProfile: UserProfile) => {
-    await AsyncStorage.multiSet([
-      [USER_PROFILE_STORAGE_KEY, JSON.stringify(nextProfile)],
-      [ONBOARDING_COMPLETE_KEY, 'true'],
-    ]);
+  const saveProfileHandler = useCallback(async (nextProfile: UserProfile) => {
+    await saveUserProfile(nextProfile);
     setProfile(nextProfile);
     setIsOnboardingComplete(true);
   }, []);
@@ -58,10 +48,10 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
       profile,
       isOnboardingComplete,
       isLoading,
-      saveProfile,
+      saveProfile: saveProfileHandler,
       refreshProfile,
     }),
-    [profile, isOnboardingComplete, isLoading, saveProfile, refreshProfile]
+    [profile, isOnboardingComplete, isLoading, saveProfileHandler, refreshProfile]
   );
 
   return <UserProfileContext.Provider value={value}>{children}</UserProfileContext.Provider>;

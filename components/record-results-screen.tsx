@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -8,7 +7,8 @@ import * as Location from 'expo-location';
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { type ActivityKey } from '@/constants/activity-content';
-import { getAttemptsStorageKey, type ActivityAttempt } from '@/constants/activity-attempt';
+import { type ActivityAttempt } from '@/constants/activity-attempt';
+import { loadActivityAttempts, saveActivityAttempts } from '@/lib/db';
 import { useChallengeTimer } from '@/contexts/challenge-timer-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import {
@@ -95,10 +95,9 @@ export function RecordResultsScreen({ activityKey }: RecordResultsScreenProps) {
         location,
         createdAt: new Date().toISOString(),
       };
-      const saved = await AsyncStorage.getItem(getAttemptsStorageKey(activityKey));
-      const attempts = saved ? (JSON.parse(saved) as ActivityAttempt[]) : [];
+      const attempts = await loadActivityAttempts<ActivityAttempt>(activityKey);
       attempts.push(attempt);
-      await AsyncStorage.setItem(getAttemptsStorageKey(activityKey), JSON.stringify(attempts));
+      await saveActivityAttempts(activityKey, attempts);
       await clearRecordResultsDraft(activityKey);
       await reportAttemptRecorded(activityKey);
       router.back();
