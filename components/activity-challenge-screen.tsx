@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
+import { ParachuteAttemptSummary } from '@/components/parachute-attempt-summary';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { RecordResultsDraftBar } from '@/components/record-results-draft-bar';
 import { ThemedText } from '@/components/themed-text';
@@ -22,8 +23,15 @@ import {
   getRatingStorageKey,
   type ActivityAttempt,
 } from '@/constants/activity-attempt';
-import { type RecordResultsDraft } from '@/constants/record-results-draft';
+import {
+  isParachuteActivityAttempt,
+  type ParachuteActivityAttempt,
+} from '@/constants/parachute-attempt';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import {
+  clearParachuteRecordResultsDraft,
+  loadParachuteRecordResultsDraft,
+} from '@/lib/parachute-record-results-draft';
 import {
   clearRecordResultsDraft,
   loadRecordResultsDraft,
@@ -38,8 +46,8 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const content = getActivityContent(activityKey);
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
-  const [attempts, setAttempts] = useState<ActivityAttempt[]>([]);
-  const [draft, setDraft] = useState<RecordResultsDraft | null>(null);
+  const [attempts, setAttempts] = useState<(ActivityAttempt | ParachuteActivityAttempt)[]>([]);
+  const [draft, setDraft] = useState<{ attemptNumber: number } | null>(null);
   const { colors } = useAppTheme();
   const stepBoxBackground = colors.card;
   const stepBoxBorder = colors.borderStrong;
@@ -75,7 +83,7 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
           }
 
           if (savedAttempts) {
-            setAttempts(JSON.parse(savedAttempts) as ActivityAttempt[]);
+            setAttempts(JSON.parse(savedAttempts) as (ActivityAttempt | ParachuteActivityAttempt)[]);
           }
         } catch (error) {
           console.error('Error loading activity data:', error);
@@ -83,8 +91,13 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
       };
 
       const loadDraft = async () => {
+        if (activityKey === 'activity-1') {
+          const savedDraft = await loadParachuteRecordResultsDraft();
+          setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
+          return;
+        }
         const savedDraft = await loadRecordResultsDraft(activityKey);
-        setDraft(savedDraft);
+        setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
       };
 
       loadData();
@@ -97,7 +110,11 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   };
 
   const handleDeleteDraft = async () => {
-    await clearRecordResultsDraft(activityKey);
+    if (activityKey === 'activity-1') {
+      await clearParachuteRecordResultsDraft();
+    } else {
+      await clearRecordResultsDraft(activityKey);
+    }
     setDraft(null);
   };
 
@@ -241,25 +258,31 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
               attempts.map((attempt, index) => (
                 <ThemedView key={index} style={[styles.attemptCard, themed.attemptCard]}>
                   <ThemedText type="defaultSemiBold">Attempt {index + 1}</ThemedText>
-                  <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
-                  <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
-                  <ThemedText style={styles.attemptText}>Test 3: {attempt.test3}</ThemedText>
-                  {attempt.uploadedVideo ? (
-                    <ThemedText style={styles.attemptText}>Video: {attempt.uploadedVideo}</ThemedText>
-                  ) : null}
-                  {attempt.location ? (
-                    <ThemedView style={styles.locationBoxInline}>
-                      <ThemedText style={styles.locationText}>
-                        Lat: {attempt.location.latitude.toFixed(6)}
-                      </ThemedText>
-                      <ThemedText style={styles.locationText}>
-                        Lon: {attempt.location.longitude.toFixed(6)}
-                      </ThemedText>
-                      <ThemedText style={styles.locationText}>
-                        Acc: {Math.round(attempt.location.accuracy)} m
-                      </ThemedText>
-                    </ThemedView>
-                  ) : null}
+                  {isParachuteActivityAttempt(attempt) ? (
+                    <ParachuteAttemptSummary attempt={attempt} />
+                  ) : (
+                    <>
+                      <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
+                      <ThemedText style={styles.attemptText}>Test 2: {attempt.test2}</ThemedText>
+                      <ThemedText style={styles.attemptText}>Test 3: {attempt.test3}</ThemedText>
+                      {attempt.uploadedVideo ? (
+                        <ThemedText style={styles.attemptText}>Video: {attempt.uploadedVideo}</ThemedText>
+                      ) : null}
+                      {attempt.location ? (
+                        <ThemedView style={styles.locationBoxInline}>
+                          <ThemedText style={styles.locationText}>
+                            Lat: {attempt.location.latitude.toFixed(6)}
+                          </ThemedText>
+                          <ThemedText style={styles.locationText}>
+                            Lon: {attempt.location.longitude.toFixed(6)}
+                          </ThemedText>
+                          <ThemedText style={styles.locationText}>
+                            Acc: {Math.round(attempt.location.accuracy)} m
+                          </ThemedText>
+                        </ThemedView>
+                      ) : null}
+                    </>
+                  )}
                   <ThemedText style={[styles.attemptDate, themed.attemptDate]}>
                     {new Date(attempt.createdAt).toLocaleString()}
                   </ThemedText>

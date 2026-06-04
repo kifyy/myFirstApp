@@ -66,11 +66,11 @@ export default function ActivitiesScreen() {
             <View style={styles.cardBody}>
               <ThemedText type="subtitle">{activity.title}</ThemedText>
               <ThemedText style={styles.description}>{activity.description}</ThemedText>
-              {ratings[activity.key] > 0 && (
-                <ThemedText style={[styles.ratingSummary, themed.ratingSummary]}>
-                  ⭐ {ratings[activity.key]}/5
-                </ThemedText>
-              )}
+              <ThemedText style={[styles.ratingSummary, themed.ratingSummary]}>
+                {ratings[activity.key] > 0
+                  ? `⭐ ${ratings[activity.key]}/5`
+                  : '⭐ Not yet rated!'}
+              </ThemedText>
               <Pressable
                 onPress={() => router.push(activity.route)}
                 style={({ pressed }) => [styles.rectButton, themed.rectButton, { opacity: pressed ? 0.85 : 1 }]}>

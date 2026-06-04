@@ -1,11 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { type RecordResultsDraft } from '@/constants/record-results-draft';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 type RecordResultsDraftBarProps = {
-  draft: RecordResultsDraft;
+  draft: { attemptNumber: number };
   onContinue: () => void;
   onDelete: () => void;
 };

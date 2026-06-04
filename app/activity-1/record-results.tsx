@@ -1,5 +1,5 @@
-import { RecordResultsScreen } from '@/components/record-results-screen';
+import { ParachuteRecordResultsScreen } from '@/components/parachute-record-results-screen';
 
-export default function ParachuteRecordResultsScreen() {
-  return <RecordResultsScreen activityKey="activity-1" />;
+export default function ParachuteRecordResultsRoute() {
+  return <ParachuteRecordResultsScreen />;
 }
