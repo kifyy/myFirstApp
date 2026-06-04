@@ -1,5 +1,12 @@
 export type ActivityKey = 'activity-1' | 'activity-2' | 'activity-3' | 'activity-4';
 
+export const ACTIVITY_IMAGES: Record<ActivityKey, number> = {
+  'activity-1': require('@/assets/images/partial-react-logo.png'),
+  'activity-2': require('@/assets/images/sound-logo.png'),
+  'activity-3': require('@/assets/images/fan-logo.png'),
+  'activity-4': require('@/assets/images/bridge-logo.png'),
+};
+
 export type ActivityContent = {
   key: ActivityKey;
   title: string;

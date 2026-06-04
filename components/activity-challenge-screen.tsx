@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
+  ACTIVITY_IMAGES,
   getActivityContent,
   type ActivityKey,
 } from '@/constants/activity-content';
@@ -163,8 +164,9 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
           headerBackgroundColor={{ light: colors.parallaxHeader, dark: colors.parallaxHeader }}
           headerImage={
             <Image
-              source={require('@/assets/images/partial-react-logo.png')}
-              style={styles.reactLogo}
+              source={ACTIVITY_IMAGES[activityKey]}
+              style={styles.heroImage}
+              contentFit="contain"
             />
           }>
           <ThemedView style={styles.titleContainer}>
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
   starButton: { padding: 4 },
   star: { fontSize: 32 },
   ratingDisplay: { fontSize: 14, paddingHorizontal: 8 },
-  reactLogo: {
+  heroImage: {
     height: 178,
     width: 290,
     bottom: 0,
