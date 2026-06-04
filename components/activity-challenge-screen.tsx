@@ -9,6 +9,7 @@ import { AppScreen } from '@/components/app-screen';
 import { ParachuteAttemptSummary } from '@/components/parachute-attempt-summary';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { RecordResultsDraftBar } from '@/components/record-results-draft-bar';
+import { SoundPollutionAttemptSummary } from '@/components/sound-pollution-attempt-summary';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
@@ -27,11 +28,19 @@ import {
   isParachuteActivityAttempt,
   type ParachuteActivityAttempt,
 } from '@/constants/parachute-attempt';
+import {
+  isSoundPollutionActivityAttempt,
+  type SoundPollutionActivityAttempt,
+} from '@/constants/sound-pollution-attempt';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import {
   clearParachuteRecordResultsDraft,
   loadParachuteRecordResultsDraft,
 } from '@/lib/parachute-record-results-draft';
+import {
+  clearSoundPollutionRecordResultsDraft,
+  loadSoundPollutionRecordResultsDraft,
+} from '@/lib/sound-pollution-record-results-draft';
 import {
   clearRecordResultsDraft,
   loadRecordResultsDraft,
@@ -46,7 +55,9 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const content = getActivityContent(activityKey);
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
-  const [attempts, setAttempts] = useState<(ActivityAttempt | ParachuteActivityAttempt)[]>([]);
+  const [attempts, setAttempts] = useState<
+    (ActivityAttempt | ParachuteActivityAttempt | SoundPollutionActivityAttempt)[]
+  >([]);
   const [draft, setDraft] = useState<{ attemptNumber: number } | null>(null);
   const { colors } = useAppTheme();
   const stepBoxBackground = colors.card;
@@ -83,7 +94,13 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
           }
 
           if (savedAttempts) {
-            setAttempts(JSON.parse(savedAttempts) as (ActivityAttempt | ParachuteActivityAttempt)[]);
+            setAttempts(
+              JSON.parse(savedAttempts) as (
+                | ActivityAttempt
+                | ParachuteActivityAttempt
+                | SoundPollutionActivityAttempt
+              )[]
+            );
           }
         } catch (error) {
           console.error('Error loading activity data:', error);
@@ -93,6 +110,11 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
       const loadDraft = async () => {
         if (activityKey === 'activity-1') {
           const savedDraft = await loadParachuteRecordResultsDraft();
+          setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
+          return;
+        }
+        if (activityKey === 'activity-2') {
+          const savedDraft = await loadSoundPollutionRecordResultsDraft();
           setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
           return;
         }
@@ -112,6 +134,8 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const handleDeleteDraft = async () => {
     if (activityKey === 'activity-1') {
       await clearParachuteRecordResultsDraft();
+    } else if (activityKey === 'activity-2') {
+      await clearSoundPollutionRecordResultsDraft();
     } else {
       await clearRecordResultsDraft(activityKey);
     }
@@ -260,6 +284,8 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
                   <ThemedText type="defaultSemiBold">Attempt {index + 1}</ThemedText>
                   {isParachuteActivityAttempt(attempt) ? (
                     <ParachuteAttemptSummary attempt={attempt} />
+                  ) : isSoundPollutionActivityAttempt(attempt) ? (
+                    <SoundPollutionAttemptSummary attempt={attempt} />
                   ) : (
                     <>
                       <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>

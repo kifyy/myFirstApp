@@ -1,5 +1,5 @@
-import { RecordResultsScreen } from '@/components/record-results-screen';
+import { SoundPollutionRecordResultsScreen } from '@/components/sound-pollution-record-results-screen';
 
-export default function SoundPollutionRecordResultsScreen() {
-  return <RecordResultsScreen activityKey="activity-2" />;
+export default function SoundPollutionRecordResultsRoute() {
+  return <SoundPollutionRecordResultsScreen />;
 }

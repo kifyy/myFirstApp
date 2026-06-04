@@ -10,10 +10,19 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "userInterfaceStyle": "automatic"
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "STEMM Lab uses the microphone to measure sound levels during activities.",
+        "NSLocationWhenInUseUsageDescription": "STEMM Lab uses your location to tag sound measurement spots on the map."
+      }
     },
     "android": {
       "userInterfaceStyle": "automatic",
+      "permissions": [
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -30,6 +39,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-av",
       [
         "expo-notifications",
         {
