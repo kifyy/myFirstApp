@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
+import { DecimalStopwatch } from '@/components/decimal-stopwatch';
 import { ThemedText } from '@/components/themed-text';
 import { getAttemptsStorageKey } from '@/constants/activity-attempt';
 import {
@@ -131,9 +132,7 @@ export function ParachuteRecordResultsScreen() {
 
   const updateParachuteTime = (index: number, value: string) => {
     setParachuteTimes((current) =>
-      current.map((entry, entryIndex) =>
-        entryIndex === index ? sanitizeDecimalInput(value) : entry
-      )
+      current.map((entry, entryIndex) => (entryIndex === index ? value : entry))
     );
   };
 
@@ -148,7 +147,7 @@ export function ParachuteRecordResultsScreen() {
     if (dropHeightM === null || baselineTimeS === null || baselineTimeS <= 0) {
       Alert.alert(
         'Missing measurements',
-        'Enter drop height and baseline time (greater than 0) before saving.'
+        'Enter drop height and record baseline time with the stopwatch before saving.'
       );
       return;
     }
@@ -257,14 +256,7 @@ export function ParachuteRecordResultsScreen() {
         />
 
         <ThemedText style={styles.label}>Measure the time in seconds</ThemedText>
-        <TextInput
-          value={baselineTime}
-          onChangeText={(text) => setBaselineTime(sanitizeDecimalInput(text))}
-          placeholder="e.g. 0.5"
-          keyboardType="decimal-pad"
-          style={[styles.input, themed.input]}
-          placeholderTextColor={colors.placeholder}
-        />
+        <DecimalStopwatch value={baselineTime} onChange={setBaselineTime} />
 
         <VelocityBox
           label="Baseline Velocity"
@@ -284,13 +276,9 @@ export function ParachuteRecordResultsScreen() {
             <View key={index} style={styles.parachuteBlock}>
               <ThemedText style={styles.sectionTitle}>Parachute {index + 1} Test</ThemedText>
               <ThemedText style={styles.label}>Time in seconds</ThemedText>
-              <TextInput
+              <DecimalStopwatch
                 value={timeValue}
-                onChangeText={(text) => updateParachuteTime(index, text)}
-                placeholder="e.g. 1.2"
-                keyboardType="decimal-pad"
-                style={[styles.input, themed.input]}
-                placeholderTextColor={colors.placeholder}
+                onChange={(value) => updateParachuteTime(index, value)}
               />
               <VelocityBox
                 label={`Parachute ${index + 1} Velocity`}
