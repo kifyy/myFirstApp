@@ -32,12 +32,13 @@ import {
   isSoundPollutionActivityAttempt,
   type SoundPollutionActivityAttempt,
 } from '@/constants/sound-pollution-attempt';
+import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { saveActivityUserRating } from '@/lib/activity-rating';
 import {
   getActivityRating,
   loadActivityAttempts,
   saveActivityAttempts,
-  setActivityRating,
 } from '@/lib/db';
 import {
   clearEarthquakeRecordResultsDraft,
@@ -62,6 +63,7 @@ type ActivityChallengeScreenProps = {
 
 export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreenProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const content = getActivityContent(activityKey);
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
@@ -161,7 +163,7 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const handleRating = async (stars: number) => {
     try {
       setRating(stars);
-      await setActivityRating(activityKey, stars);
+      await saveActivityUserRating(activityKey, stars, user?.uid);
     } catch (error) {
       console.error('Error saving rating:', error);
     }

@@ -7,8 +7,7 @@ import {
   initDatabase,
   saveUserProfile as saveLocalUserProfile,
 } from '@/lib/db';
-import { syncActivityRatingsOnLogin } from '@/lib/firestore-activity-ratings';
-import { syncLeaderboardOnLogin } from '@/lib/firestore-leaderboard';
+import { syncFirestoreOnLogin } from '@/lib/firestore-sync';
 import { loadFirestoreUserProfile, saveFirestoreUserProfile } from '@/lib/firestore-profile';
 
 type UserProfileContextValue = {
@@ -43,7 +42,11 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
         return;
       }
 
-      await Promise.all([syncLeaderboardOnLogin(), syncActivityRatingsOnLogin()]);
+      try {
+        await syncFirestoreOnLogin();
+      } catch (syncError) {
+        console.error('Error syncing Firestore data on login:', syncError);
+      }
 
       const firestoreProfile = await loadFirestoreUserProfile(user.uid);
       if (firestoreProfile) {

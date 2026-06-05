@@ -11,11 +11,24 @@ import {
   FIRESTORE_ACTIVITY_RATINGS_COLLECTION,
   FIRESTORE_ACTIVITY_RATINGS_META_COLLECTION,
   FIRESTORE_ACTIVITY_RATINGS_META_ID,
+  FIRESTORE_ACTIVITY_USER_RATINGS_COLLECTION,
 } from '@/constants/firebase-config';
 import { MOCK_ACTIVITY_AVERAGE_RATINGS } from '@/constants/mock-activity-ratings';
 import { saveActivityAverageRatings } from '@/lib/db';
 import { firestoreDb } from '@/lib/firebase';
-import { roundToOneDecimal } from '@/lib/rating-utils';
+import { computeUpdatedAverage, roundToOneDecimal } from '@/lib/rating-utils';
+
+function userActivityRatingDocId(uid: string, activityKey: string): string {
+  return `${uid}__${activityKey}`;
+}
+
+function userActivityRatingDocRef(uid: string, activityKey: string) {
+  return doc(
+    firestoreDb,
+    FIRESTORE_ACTIVITY_USER_RATINGS_COLLECTION,
+    userActivityRatingDocId(uid, activityKey)
+  );
+}
 
 function activityRatingsCollection() {
   return collection(firestoreDb, FIRESTORE_ACTIVITY_RATINGS_COLLECTION);
@@ -101,4 +114,55 @@ export async function syncActivityRatingsOnLogin(): Promise<ActivityAverageRatin
   const ratings = await loadActivityRatingsFromFirestore();
   await saveActivityAverageRatings(ratings);
   return ratings;
+}
+
+export async function submitUserActivityRating(
+  uid: string,
+  activityKey: string,
+  rating: number
+): Promise<ActivityAverageRating> {
+  const [aggregateSnapshot, userRatingSnapshot] = await Promise.all([
+    getDoc(activityRatingDocRef(activityKey)),
+    getDoc(userActivityRatingDocRef(uid, activityKey)),
+  ]);
+
+  const aggregateData = aggregateSnapshot.data() ?? {};
+  const currentAverage = Number(aggregateData.averageRating ?? 0);
+  const currentCount = Number(aggregateData.ratingCount ?? 0);
+  const previousUserRating = userRatingSnapshot.exists()
+    ? Number(userRatingSnapshot.data()?.rating ?? 0)
+    : null;
+
+  const { averageRating, ratingCount } = computeUpdatedAverage(
+    currentAverage,
+    currentCount,
+    rating,
+    previousUserRating
+  );
+
+  const batch = writeBatch(firestoreDb);
+
+  batch.set(
+    userActivityRatingDocRef(uid, activityKey),
+    {
+      uid,
+      activityKey,
+      rating,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+
+  batch.set(
+    activityRatingDocRef(activityKey),
+    {
+      averageRating,
+      ratingCount,
+    },
+    { merge: true }
+  );
+
+  await batch.commit();
+
+  return { activityKey, averageRating, ratingCount };
 }

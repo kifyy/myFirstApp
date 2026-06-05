@@ -91,6 +91,14 @@ export async function saveActivityAverageRatings(ratings: ActivityAverageRating[
   });
 }
 
+export async function upsertActivityAverageRating(rating: ActivityAverageRating): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO activity_average_ratings (activity_key, average_rating, rating_count) VALUES (?, ?, ?)',
+    [rating.activityKey, rating.averageRating, rating.ratingCount]
+  );
+}
+
 export async function loadActivityAttempts<T>(activityKey: string): Promise<T[]> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ attempts_json: string }>(

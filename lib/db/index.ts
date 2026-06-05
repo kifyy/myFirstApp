@@ -19,4 +19,5 @@ export {
   saveRecordResultsDraftJson,
   saveUserProfile,
   setActivityRating,
+  upsertActivityAverageRating,
 } from './stores';
