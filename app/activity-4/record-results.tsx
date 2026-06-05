@@ -1,5 +1,5 @@
-import { RecordResultsScreen } from '@/components/record-results-screen';
+import { EarthquakeRecordResultsScreen } from '@/components/earthquake-record-results-screen';
 
-export default function EarthquakeRecordResultsScreen() {
-  return <RecordResultsScreen activityKey="activity-4" />;
+export default function EarthquakeRecordResultsRoute() {
+  return <EarthquakeRecordResultsScreen />;
 }

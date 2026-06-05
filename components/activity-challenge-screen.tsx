@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
+import { EarthquakeAttemptSummary } from '@/components/earthquake-attempt-summary';
 import { ParachuteAttemptSummary } from '@/components/parachute-attempt-summary';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { RecordResultsDraftBar } from '@/components/record-results-draft-bar';
@@ -13,12 +14,16 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { type ActivityAttempt } from '@/constants/activity-attempt';
 import {
   ACTIVITY_IMAGES,
   getActivityContent,
   type ActivityKey,
 } from '@/constants/activity-content';
-import { type ActivityAttempt } from '@/constants/activity-attempt';
+import {
+  isEarthquakeActivityAttempt,
+  type EarthquakeActivityAttempt,
+} from '@/constants/earthquake-attempt';
 import {
   isParachuteActivityAttempt,
   type ParachuteActivityAttempt,
@@ -35,17 +40,21 @@ import {
   setActivityRating,
 } from '@/lib/db';
 import {
+  clearEarthquakeRecordResultsDraft,
+  loadEarthquakeRecordResultsDraft,
+} from '@/lib/earthquake-record-results-draft';
+import {
   clearParachuteRecordResultsDraft,
   loadParachuteRecordResultsDraft,
 } from '@/lib/parachute-record-results-draft';
 import {
-  clearSoundPollutionRecordResultsDraft,
-  loadSoundPollutionRecordResultsDraft,
-} from '@/lib/sound-pollution-record-results-draft';
-import {
   clearRecordResultsDraft,
   loadRecordResultsDraft,
 } from '@/lib/record-results-draft';
+import {
+  clearSoundPollutionRecordResultsDraft,
+  loadSoundPollutionRecordResultsDraft,
+} from '@/lib/sound-pollution-record-results-draft';
 
 type ActivityChallengeScreenProps = {
   activityKey: ActivityKey;
@@ -57,7 +66,12 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
   const [speakingStep, setSpeakingStep] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
   const [attempts, setAttempts] = useState<
-    (ActivityAttempt | ParachuteActivityAttempt | SoundPollutionActivityAttempt)[]
+    (
+      | ActivityAttempt
+      | ParachuteActivityAttempt
+      | SoundPollutionActivityAttempt
+      | EarthquakeActivityAttempt
+    )[]
   >([]);
   const [draft, setDraft] = useState<{ attemptNumber: number } | null>(null);
   const { colors } = useAppTheme();
@@ -88,7 +102,10 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
           const [savedRating, savedAttempts] = await Promise.all([
             getActivityRating(activityKey),
             loadActivityAttempts<
-              ActivityAttempt | ParachuteActivityAttempt | SoundPollutionActivityAttempt
+              | ActivityAttempt
+              | ParachuteActivityAttempt
+              | SoundPollutionActivityAttempt
+              | EarthquakeActivityAttempt
             >(activityKey),
           ]);
 
@@ -110,6 +127,11 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
           setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
           return;
         }
+        if (activityKey === 'activity-4') {
+          const savedDraft = await loadEarthquakeRecordResultsDraft();
+          setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
+          return;
+        }
         const savedDraft = await loadRecordResultsDraft(activityKey);
         setDraft(savedDraft ? { attemptNumber: savedDraft.attemptNumber } : null);
       };
@@ -128,6 +150,8 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
       await clearParachuteRecordResultsDraft();
     } else if (activityKey === 'activity-2') {
       await clearSoundPollutionRecordResultsDraft();
+    } else if (activityKey === 'activity-4') {
+      await clearEarthquakeRecordResultsDraft();
     } else {
       await clearRecordResultsDraft(activityKey);
     }
@@ -278,6 +302,8 @@ export function ActivityChallengeScreen({ activityKey }: ActivityChallengeScreen
                     <ParachuteAttemptSummary attempt={attempt} />
                   ) : isSoundPollutionActivityAttempt(attempt) ? (
                     <SoundPollutionAttemptSummary attempt={attempt} />
+                  ) : isEarthquakeActivityAttempt(attempt) ? (
+                    <EarthquakeAttemptSummary attempt={attempt} />
                   ) : (
                     <>
                       <ThemedText style={styles.attemptText}>Test 1: {attempt.test1}</ThemedText>
