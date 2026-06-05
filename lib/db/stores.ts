@@ -1,3 +1,4 @@
+import type { ActivityAverageRating } from '@/constants/mock-activity-ratings';
 import type { ChallengeTimerState } from '@/constants/challenge-timer';
 import { LEADERBOARD_STORAGE_KEY, type LeaderboardEntry } from '@/constants/leaderboard';
 import type { UserProfile, YearLevel } from '@/constants/user-profile';
@@ -39,6 +40,11 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
   );
 }
 
+export async function clearUserProfile(): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM user_profile WHERE id = 1');
+}
+
 export async function getActivityRating(activityKey: string): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ rating: number }>(
@@ -62,6 +68,27 @@ export async function setActivityRating(activityKey: string, rating: number): Pr
     'INSERT OR REPLACE INTO activity_ratings (activity_key, rating) VALUES (?, ?)',
     [activityKey, rating]
   );
+}
+
+export async function getAllActivityAverageRatings(): Promise<Record<string, number>> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ activity_key: string; average_rating: number }>(
+    'SELECT activity_key, average_rating FROM activity_average_ratings'
+  );
+  return Object.fromEntries(rows.map((row) => [row.activity_key, row.average_rating]));
+}
+
+export async function saveActivityAverageRatings(ratings: ActivityAverageRating[]): Promise<void> {
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM activity_average_ratings');
+    for (const rating of ratings) {
+      await db.runAsync(
+        'INSERT INTO activity_average_ratings (activity_key, average_rating, rating_count) VALUES (?, ?, ?)',
+        [rating.activityKey, rating.averageRating, rating.ratingCount]
+      );
+    }
+  });
 }
 
 export async function loadActivityAttempts<T>(activityKey: string): Promise<T[]> {

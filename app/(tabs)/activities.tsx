@@ -6,7 +6,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/app-screen';
 import { ThemedText } from '@/components/themed-text';
 import { ACTIVITIES } from '@/constants/activities';
-import { getAllActivityRatings } from '@/lib/db';
+import { getAllActivityAverageRatings } from '@/lib/db';
+import { formatAverageRating } from '@/lib/rating-utils';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function ActivitiesScreen() {
@@ -31,7 +32,7 @@ export default function ActivitiesScreen() {
 
       const loadRatings = async () => {
         try {
-          const storedRatings = await getAllActivityRatings();
+          const storedRatings = await getAllActivityAverageRatings();
 
           if (isActive) {
             setRatings(storedRatings);
@@ -63,7 +64,7 @@ export default function ActivitiesScreen() {
               <ThemedText style={styles.description}>{activity.description}</ThemedText>
               <ThemedText style={[styles.ratingSummary, themed.ratingSummary]}>
                 {ratings[activity.key] > 0
-                  ? `⭐ ${ratings[activity.key]}/5`
+                  ? `⭐ ${formatAverageRating(ratings[activity.key])}/5 avg`
                   : '⭐ Not yet rated!'}
               </ThemedText>
               <Pressable

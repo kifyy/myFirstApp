@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from '@/contexts/auth-context';
 import { ChallengeTimerProvider } from '@/contexts/challenge-timer-context';
 import { UserProfileProvider } from '@/contexts/user-profile-context';
 import { Colors } from '@/constants/theme';
@@ -31,6 +32,8 @@ function RootLayoutContent() {
     <ThemeProvider value={navigationTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="setup" options={{ headerShown: false }} />
         <Stack.Screen name="landing" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="activity-1" options={{ headerShown: false }} />
@@ -51,11 +54,13 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <UserProfileProvider>
-        <ChallengeTimerProvider>
-          <RootLayoutContent />
-        </ChallengeTimerProvider>
-      </UserProfileProvider>
+      <AuthProvider>
+        <UserProfileProvider>
+          <ChallengeTimerProvider>
+            <RootLayoutContent />
+          </ChallengeTimerProvider>
+        </UserProfileProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

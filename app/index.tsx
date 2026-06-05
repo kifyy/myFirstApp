@@ -2,24 +2,14 @@ import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/contexts/auth-context';
 import { useUserProfile } from '@/contexts/user-profile-context';
-// Import the functions you need from the SDKs you need
-import { getAnalytics } from "firebase/analytics";
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-import '../../firebase.js';
-const {firebaseConfig} = require('../../firebase.js');
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
 export default function IndexScreen() {
-  const { isOnboardingComplete, isLoading } = useUserProfile();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isOnboardingComplete, isLoading: profileLoading } = useUserProfile();
 
-  if (isLoading) {
+  if (authLoading || profileLoading) {
     return (
       <ThemedView style={styles.loading}>
         <ActivityIndicator size="large" />
@@ -27,11 +17,15 @@ export default function IndexScreen() {
     );
   }
 
-  if (isOnboardingComplete) {
-    return <Redirect href="/(tabs)/activities" />;
+  if (!user) {
+    return <Redirect href="/login" />;
   }
 
-  return <Redirect href="/landing" />;
+  if (!isOnboardingComplete) {
+    return <Redirect href="/setup" />;
+  }
+
+  return <Redirect href="/(tabs)/activities" />;
 }
 
 const styles = StyleSheet.create({

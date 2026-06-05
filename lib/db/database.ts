@@ -37,6 +37,11 @@ const SCHEMA_SQL = `
     activity_key TEXT PRIMARY KEY NOT NULL,
     rating INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS activity_average_ratings (
+    activity_key TEXT PRIMARY KEY NOT NULL,
+    average_rating REAL NOT NULL,
+    rating_count INTEGER NOT NULL DEFAULT 0
+  );
   CREATE TABLE IF NOT EXISTS activity_attempts (
     activity_key TEXT PRIMARY KEY NOT NULL,
     attempts_json TEXT NOT NULL DEFAULT '[]'
