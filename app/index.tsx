@@ -5,6 +5,8 @@ import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useUserProfile } from '@/contexts/user-profile-context';
 
+
+
 export default function IndexScreen() {
   const { user, isLoading: authLoading } = useAuth();
   const { isOnboardingComplete, isLoading: profileLoading } = useUserProfile();

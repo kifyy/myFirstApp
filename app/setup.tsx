@@ -38,7 +38,7 @@ export default function SetupScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <Image
-            source={require('@/assets/images/partial-react-logo.png')}
+            source={require('@/assets/images/icon.png')}
             style={styles.heroImage}
             contentFit="contain"
           />
@@ -67,6 +67,8 @@ const styles = StyleSheet.create({
   heroImage: {
     width: 160,
     height: 160,
+    borderRadius: 80,
+    overflow: 'hidden',
     marginBottom: 8,
   },
 });
