@@ -1,6 +1,7 @@
 import type { LeaderboardEntry } from '@/constants/leaderboard';
 import type { UserProfile } from '@/constants/user-profile';
 import { loadLeaderboardEntries, saveLeaderboardEntries } from '@/lib/db';
+import { notifyLeaderboardPointGained } from '@/lib/leaderboard-notifications';
 
 export function getLeaderboardEntryId(profile: UserProfile): string {
   return `${profile.teamName.trim().toLowerCase()}::${profile.firstName.trim().toLowerCase()}`;
@@ -37,6 +38,12 @@ export async function addLeaderboardPoint(profile: UserProfile): Promise<Leaderb
 
   const sorted = sortLeaderboardEntries(entries);
   await saveLeaderboard(sorted);
+
+  const updatedEntry = sorted.find((entry) => entry.id === id);
+  if (updatedEntry) {
+    await notifyLeaderboardPointGained(updatedEntry.points);
+  }
+
   return sorted;
 }
 
